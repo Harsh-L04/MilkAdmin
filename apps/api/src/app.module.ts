@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { OrderingModule } from './ordering/ordering.module';
 import { DistributorModule } from './distributor/distributor.module';
+import { AdminModule } from './admin/admin.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -22,6 +23,7 @@ import { HealthController } from './health.controller';
     CatalogModule,
     OrderingModule,
     DistributorModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [
