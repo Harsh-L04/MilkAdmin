@@ -332,7 +332,12 @@ export class OrderingService {
       where,
       orderBy: { createdAt: 'desc' },
       take: 100,
-      include: { items: true },
+      include: {
+        items: true,
+        retailer: {
+          select: { shopName: true, user: { select: { name: true, phone: true } } },
+        },
+      },
     });
   }
 
@@ -341,7 +346,12 @@ export class OrderingService {
   private async loadOrderForActor(user: AuthenticatedUser, orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true },
+      include: {
+        items: true,
+        retailer: {
+          select: { shopName: true, user: { select: { name: true, phone: true } } },
+        },
+      },
     });
     if (!order) throw new NotFoundException('Order not found');
 

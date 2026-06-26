@@ -36,7 +36,12 @@ export default function OrdersPage() {
     const q = search.trim().toLowerCase();
     return (data ?? []).filter((o) => {
       if (status !== 'ALL' && o.status !== status) return false;
-      if (q && !o.id.toLowerCase().includes(q)) return false;
+      if (q) {
+        const hay = [o.id, o.retailer?.shopName ?? '', o.retailer?.user?.phone ?? '']
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
   }, [data, search, status]);
@@ -60,7 +65,7 @@ export default function OrdersPage() {
           <SearchInput
             value={search}
             onValueChange={setSearch}
-            placeholder="Search by order ID…"
+            placeholder="Search by order ID, shop or mobile…"
             containerClassName="sm:max-w-xs"
           />
           <div className="sm:ml-auto">
@@ -116,6 +121,7 @@ export default function OrdersPage() {
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
                       <TableHead>Order</TableHead>
+                      <TableHead>Customer</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Source</TableHead>
                       <TableHead>Delivery</TableHead>
@@ -135,6 +141,12 @@ export default function OrdersPage() {
                           <p className="font-medium">#{o.id.slice(-6).toUpperCase()}</p>
                           <p className="text-xs text-muted-foreground">
                             {formatRelative(o.createdAt)}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="font-medium">{o.retailer?.shopName ?? '—'}</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">
+                            {o.retailer?.user?.phone ?? '—'}
                           </p>
                         </TableCell>
                         <TableCell>
@@ -170,6 +182,12 @@ export default function OrdersPage() {
                           <span className="font-medium">#{o.id.slice(-6).toUpperCase()}</span>
                           <OrderStatusBadge status={o.status} />
                         </div>
+                        <p className="truncate text-sm font-medium">
+                          {o.retailer?.shopName ?? '—'}
+                          <span className="ml-1 font-normal text-muted-foreground tabular-nums">
+                            {o.retailer?.user?.phone ?? ''}
+                          </span>
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {o.items.length} item{o.items.length === 1 ? '' : 's'} ·{' '}
                           {formatDate(o.deliveryDate)}

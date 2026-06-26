@@ -140,6 +140,11 @@ export interface OrderDto {
   taxTotal: string;
   total: string;
   items: OrderItemDto[];
+  /** Customer who placed the order (shop + mobile number). */
+  retailer?: {
+    shopName: string;
+    user: { name: string; phone: string } | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
   reviewReasons?: string[];

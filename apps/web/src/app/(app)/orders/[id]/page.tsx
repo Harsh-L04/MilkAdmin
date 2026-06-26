@@ -111,7 +111,9 @@ export default function OrderDetailPage() {
 
       <PageHeader
         title={`Order #${order.id.slice(-6).toUpperCase()}`}
-        description={`Placed ${formatDateTime(order.createdAt)}`}
+        description={`${order.retailer?.shopName ?? 'Customer'} · ${
+          order.retailer?.user?.phone ?? '—'
+        } · placed ${formatDateTime(order.createdAt)}`}
         actions={
           <div className="flex items-center gap-2">
             <OrderStatusBadge status={order.status} />
