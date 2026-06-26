@@ -17,7 +17,7 @@ import {
   canAccessRetailerResource,
 } from '../common/authz/scope';
 import { assertTransition } from './domain/order-state-machine';
-import { isWindowOpen } from './domain/cutoff';
+import { isWindowOpen, pickOpenWindow } from './domain/cutoff';
 import { evaluateApproval } from './domain/auto-approval';
 
 const Decimal = Prisma.Decimal;
@@ -128,6 +128,26 @@ export class OrderingService {
       include: { items: true },
     });
     return order;
+  }
+
+  // -- current window --------------------------------------------------------
+
+  async getCurrentWindow(user: AuthenticatedUser) {
+    if (!user.retailerId) {
+      throw new ForbiddenException('Only retailers have an order window');
+    }
+    const retailer = await this.prisma.retailer.findUnique({
+      where: { id: user.retailerId },
+    });
+    if (!retailer) throw new NotFoundException('Retailer not found');
+
+    const windows = await this.prisma.orderWindow.findMany({
+      where: { distributorId: retailer.distributorId, status: 'OPEN' },
+      orderBy: { deliveryDate: 'asc' },
+    });
+    const open = pickOpenWindow(windows, new Date());
+    if (!open) throw new NotFoundException('No open order window');
+    return open;
   }
 
   // -- submit (with exception-based auto approval) ---------------------------

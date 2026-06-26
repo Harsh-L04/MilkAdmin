@@ -1,9 +1,13 @@
 {
   "name": "@moderns-milk/contracts",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
+  "private": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -14,13 +18,15 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "lint": "echo \"no lint\""
+    "lint": "echo \"no lint\"",
+    "prepublishOnly": "npm run build"
   },
-  "dependencies": {
-    "zod": "^3.24.1"
+  "peerDependencies": {
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "vitest": "^3.2.6"
+    "vitest": "^3.2.6",
+    "zod": "^3.24.1"
   }
 }
