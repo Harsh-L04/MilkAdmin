@@ -55,6 +55,13 @@ export class OrderingController {
     return this.ordering.listOrders(user);
   }
 
+  // Must be declared before the `:id` route so it is not shadowed by it.
+  @Get('windows/current')
+  @Roles('RETAILER')
+  currentWindow(@CurrentUser() user: AuthenticatedUser) {
+    return this.ordering.getCurrentWindow(user);
+  }
+
   @Get(':id')
   get(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.ordering.getOrder(user, id);
