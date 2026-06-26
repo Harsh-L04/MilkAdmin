@@ -116,11 +116,12 @@ model User {
 }
 
 model Distributor {
-  id     String     @id @default(cuid())
-  code   String     @unique
-  name   String
-  region String?
-  status UserStatus @default(ACTIVE)
+  id      String     @id @default(cuid())
+  code    String     @unique
+  name    String
+  region  String?
+  address String?
+  status  UserStatus @default(ACTIVE)
 
   staff     User[]    @relation("DistributorStaff")
   retailers Retailer[]

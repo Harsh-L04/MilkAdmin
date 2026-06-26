@@ -8,6 +8,7 @@ import { RolesGuard } from './common/auth/roles.guard';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { OrderingModule } from './ordering/ordering.module';
+import { DistributorModule } from './distributor/distributor.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -20,6 +21,7 @@ import { HealthController } from './health.controller';
     AuthModule,
     CatalogModule,
     OrderingModule,
+    DistributorModule,
   ],
   controllers: [HealthController],
   providers: [
