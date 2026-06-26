@@ -104,9 +104,9 @@ async function main() {
 
   // Admin
   await prisma.user.upsert({
-    where: { phone: '+910000000001' },
+    where: { phone: '+919000000001' },
     update: {},
-    create: { phone: '+910000000001', name: 'Platform Admin', role: Role.ADMIN, email: 'admin@modernsmilk.com' },
+    create: { phone: '+919000000001', name: 'Platform Admin', role: Role.ADMIN, email: 'admin@modernsmilk.com' },
   });
 
   // Distributor org + staff user + route
@@ -116,9 +116,9 @@ async function main() {
     create: { code: 'DIST-001', name: 'Central Dairy Distributor', region: 'North' },
   });
   await prisma.user.upsert({
-    where: { phone: '+910000000002' },
+    where: { phone: '+919000000002' },
     update: { distributorId: distributor.id },
-    create: { phone: '+910000000002', name: 'Distributor Manager', role: Role.DISTRIBUTOR, distributorId: distributor.id },
+    create: { phone: '+919000000002', name: 'Distributor Manager', role: Role.DISTRIBUTOR, distributorId: distributor.id },
   });
   const route = await prisma.route.upsert({
     where: { distributorId_name: { distributorId: distributor.id, name: 'Route A' } },
@@ -128,9 +128,9 @@ async function main() {
 
   // Retailer user + retailer + account
   const retailerUser = await prisma.user.upsert({
-    where: { phone: '+910000000003' },
+    where: { phone: '+919000000003' },
     update: {},
-    create: { phone: '+910000000003', name: 'Sharma General Store', role: Role.RETAILER },
+    create: { phone: '+919000000003', name: 'Sharma General Store', role: Role.RETAILER },
   });
   const retailer = await prisma.retailer.upsert({
     where: { userId: retailerUser.id },
@@ -147,6 +147,27 @@ async function main() {
     update: {},
     create: { retailerId: retailer.id, balance: '0', creditLimit: '20000' },
   });
+
+  // Open order window so retailers can place orders out of the box.
+  // Delivery tomorrow; cutoff set far ahead so the demo window stays OPEN.
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  const farCutoff = new Date(tomorrow);
+  farCutoff.setFullYear(farCutoff.getFullYear() + 1);
+  await prisma.orderWindow.upsert({
+    where: { id: 'seed-open-window' },
+    update: { deliveryDate: tomorrow, cutoffAt: farCutoff, status: 'OPEN' },
+    create: {
+      id: 'seed-open-window',
+      distributorId: distributor.id,
+      routeId: route.id,
+      deliveryDate: tomorrow,
+      cutoffAt: farCutoff,
+      status: 'OPEN',
+    },
+  });
+  console.log('  open order window (seed-open-window)');
 
   console.log('Seed complete.');
 }
