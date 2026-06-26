@@ -180,9 +180,8 @@ export default function LoginPage() {
           <div className="mt-8 rounded-md border border-dashed border-border bg-muted/40 p-4 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">Dev sign-in</p>
             <p className="mt-1">
-              Demo numbers: <code>+910000000001</code> (Admin), <code>+910000000002</code>{' '}
-              (Distributor), <code>+910000000003</code> (Retailer). In dev the OTP is printed to
-              the API server log.
+              Admin number: <code>+919000000001</code>. In dev the OTP is printed to the API
+              server log.
             </p>
           </div>
         </div>

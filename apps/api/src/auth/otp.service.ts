@@ -53,26 +53,34 @@ export class OtpService {
   }
 
   async request(phone: string, ip: string): Promise<void> {
-    // Resend cooldown.
+    // Dev mode (console SMS) skips abuse throttling so local testing isn't
+    // blocked by cooldown / rate limits. Real SMS providers keep full protection.
+    const devMode = this.config.get('SMS_PROVIDER') === 'console';
     const cooldownKey = `otp:cooldown:${phone}`;
-    if (await this.redis.get(cooldownKey)) {
-      throw new TooManyRequestsException('Please wait before requesting a new code');
-    }
 
-    // Rate limits (per phone / per IP over a rolling hour).
-    const perPhone = await this.redis.incrWithTtl(`otp:rl:phone:${phone}`, 3600);
-    const perIp = await this.redis.incrWithTtl(`otp:rl:ip:${ip}`, 3600);
-    if (perPhone > 5 || perIp > 20) {
-      throw new TooManyRequestsException('OTP request limit exceeded');
+    if (!devMode) {
+      // Resend cooldown.
+      if (await this.redis.get(cooldownKey)) {
+        throw new TooManyRequestsException('Please wait before requesting a new code');
+      }
+
+      // Rate limits (per phone / per IP over a rolling hour).
+      const perPhone = await this.redis.incrWithTtl(`otp:rl:phone:${phone}`, 3600);
+      const perIp = await this.redis.incrWithTtl(`otp:rl:ip:${ip}`, 3600);
+      if (perPhone > 5 || perIp > 20) {
+        throw new TooManyRequestsException('OTP request limit exceeded');
+      }
     }
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     const record: OtpRecord = { hash: this.hash(phone, code), attempts: 0 };
     await this.redis.setEx(this.otpKey(phone), JSON.stringify(record), this.ttl);
-    await this.redis.setEx(cooldownKey, '1', this.cooldown);
+    if (!devMode) {
+      await this.redis.setEx(cooldownKey, '1', this.cooldown);
+    }
 
     // In dev we log instead of sending an SMS. Real providers wire in here.
-    if (this.config.get('SMS_PROVIDER') === 'console') {
+    if (devMode) {
       this.logger.log(`[DEV] OTP for ${phone} is ${code}`);
     }
   }
