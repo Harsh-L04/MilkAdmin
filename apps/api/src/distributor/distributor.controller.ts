@@ -38,6 +38,12 @@ export class DistributorController {
     return this.distributor.listCustomers(user);
   }
 
+  @Get('sales-team')
+  @Roles('DISTRIBUTOR')
+  listSalesTeam(@CurrentUser() user: AuthenticatedUser) {
+    return this.distributor.listSalesTeam(user);
+  }
+
   @Post('customers')
   @Roles('DISTRIBUTOR')
   createCustomer(

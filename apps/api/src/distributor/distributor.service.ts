@@ -13,10 +13,20 @@ interface RetailerWithRefs {
   shopName: string;
   addressLine: string | null;
   gstin: string | null;
+  whatsapp: string | null;
+  paymentTerms: string | null;
+  outletType: 'NEW' | 'EXISTING';
   createdAt: Date;
   route: { name: string } | null;
   user: { phone: string } | null;
+  salesOfficer: { name: string } | null;
 }
+
+const RETAILER_INCLUDE = {
+  route: true,
+  user: { select: { phone: true } },
+  salesOfficer: { select: { name: true } },
+} as const;
 
 @Injectable()
 export class DistributorService {
@@ -77,9 +87,19 @@ export class DistributorService {
       where: { distributorId },
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { route: true, user: { select: { phone: true } } },
+      include: RETAILER_INCLUDE,
     });
     return retailers.map((r) => this.toCustomerDto(r));
+  }
+
+  async listSalesTeam(user: AuthenticatedUser) {
+    const distributorId = this.scopeId(user);
+    const reps = await this.prisma.user.findMany({
+      where: { role: 'SALES_OFFICER', distributorId, status: 'ACTIVE' },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, phone: true },
+    });
+    return reps;
   }
 
   async createCustomer(user: AuthenticatedUser, input: CreateCustomerInput) {
@@ -115,8 +135,12 @@ export class DistributorService {
           shopName: input.outletName,
           addressLine: input.address,
           gstin: input.gstin ?? null,
+          whatsapp: input.whatsapp ?? null,
+          paymentTerms: input.paymentTerms ?? null,
+          outletType: input.outletType,
+          salesOfficerId: input.salesOfficerId ?? null,
         },
-        include: { route: true, user: { select: { phone: true } } },
+        include: RETAILER_INCLUDE,
       });
 
       await tx.retailerAccount.create({
@@ -137,6 +161,10 @@ export class DistributorService {
       route: r.route?.name ?? null,
       gstin: r.gstin,
       phone: r.user?.phone ?? '',
+      whatsapp: r.whatsapp,
+      paymentTerms: r.paymentTerms,
+      outletType: r.outletType,
+      salesOfficer: r.salesOfficer?.name ?? null,
       createdAt: r.createdAt,
     };
   }
