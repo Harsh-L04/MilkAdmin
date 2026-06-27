@@ -286,6 +286,7 @@ model OrderWindow {
 
 model StandingOrder {
   id         String   @id @default(cuid())
+  name       String?
   retailerId String
   retailer   Retailer @relation(fields: [retailerId], references: [id])
   // 7-bit weekday mask, Monday = bit 0. 127 = every day.

@@ -45,9 +45,37 @@ export const standingOrderItemSchema = z.object({
 });
 
 export const upsertStandingOrderSchema = z.object({
+  retailerId: cuid,
+  name: z.string().trim().max(80).optional(),
   // 7-bit weekday mask, Monday = bit 0. 127 = every day.
-  weekdayMask: z.number().int().min(0).max(127).default(127),
+  weekdayMask: z.number().int().min(1).max(127).default(127),
   active: z.boolean().default(true),
   items: z.array(standingOrderItemSchema).min(1),
 });
 export type UpsertStandingOrderInput = z.infer<typeof upsertStandingOrderSchema>;
+
+export interface StandingOrderLineDto {
+  productId: string;
+  qty: number;
+  product?: {
+    id: string;
+    sku: string;
+    name: string;
+    category: string;
+    uom: string;
+    packSize: string;
+    taxRate: string;
+    isReturnablePack: boolean;
+    active: boolean;
+  };
+}
+
+export interface StandingOrderDto {
+  id: string;
+  name: string | null;
+  retailerId: string;
+  retailer: string;
+  weekdayMask: number;
+  active: boolean;
+  items: StandingOrderLineDto[];
+}
