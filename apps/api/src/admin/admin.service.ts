@@ -34,6 +34,7 @@ export class AdminService {
         distributor: { select: { name: true } },
         route: { select: { name: true } },
         user: { select: { name: true, phone: true } },
+        salesOfficer: { select: { name: true } },
       },
     });
     return rows.map((r) => ({
@@ -41,8 +42,12 @@ export class AdminService {
       outletName: r.shopName,
       contactName: r.user?.name ?? null,
       phone: r.user?.phone ?? null,
+      whatsapp: r.whatsapp,
       route: r.route?.name ?? null,
       distributor: r.distributor?.name ?? null,
+      salesOfficer: r.salesOfficer?.name ?? null,
+      outletType: r.outletType,
+      paymentTerms: r.paymentTerms,
       gstin: r.gstin,
       address: r.addressLine,
       status: r.status,

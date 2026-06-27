@@ -1,4 +1,11 @@
-import { LayoutDashboard, ClipboardList, Package, type LucideIcon } from 'lucide-react';
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Package,
+  Building2,
+  Store,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Role } from '@moderns-milk/contracts';
 
 export interface NavItem {
@@ -28,6 +35,23 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Orders', href: '/orders', icon: ClipboardList },
       { label: 'Products', href: '/products', icon: Package },
+    ],
+  },
+  {
+    heading: 'Network',
+    items: [
+      {
+        label: 'Distributors',
+        href: '/distributors',
+        icon: Building2,
+        roles: ['ADMIN', 'SALES_HEAD'],
+      },
+      {
+        label: 'Retailers',
+        href: '/retailers',
+        icon: Store,
+        roles: ['ADMIN', 'SALES_HEAD'],
+      },
     ],
   },
 ];

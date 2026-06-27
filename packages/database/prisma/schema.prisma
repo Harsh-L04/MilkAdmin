@@ -19,6 +19,11 @@ datasource db {
 // Enums
 // ---------------------------------------------------------------------------
 
+enum OutletType {
+  NEW
+  EXISTING
+}
+
 enum Role {
   ADMIN
   SALES_HEAD
@@ -106,6 +111,7 @@ model User {
   distributor   Distributor? @relation("DistributorStaff", fields: [distributorId], references: [id])
 
   retailer  Retailer?
+  registeredRetailers Retailer[] @relation("RetailerSalesOfficer")
   auditLogs AuditLog[]
 
   createdAt DateTime @default(now())
@@ -158,12 +164,20 @@ model Retailer {
   routeId       String?
   route         Route?      @relation(fields: [routeId], references: [id])
 
-  shopName    String
-  gstin       String?
-  addressLine String?
-  lat         Float?
-  lng         Float?
-  status      UserStatus @default(ACTIVE)
+  shopName     String
+  gstin        String?
+  addressLine  String?
+  whatsapp     String?
+  paymentTerms String?
+  outletType   OutletType @default(EXISTING)
+  lat          Float?
+  lng          Float?
+  status       UserStatus @default(ACTIVE)
+
+  // Sales person who brought this outlet in — kept centrally so HQ retains
+  // the relationship even if the distributor changes.
+  salesOfficerId String?
+  salesOfficer   User?   @relation("RetailerSalesOfficer", fields: [salesOfficerId], references: [id])
 
   account        RetailerAccount?
   standingOrders StandingOrder[]

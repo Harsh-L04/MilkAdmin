@@ -29,13 +29,21 @@ const gstinSchema = z
     'Enter a valid 15-character GSTIN',
   );
 
+export const outletTypeSchema = z.enum(['NEW', 'EXISTING']);
+export type OutletType = z.infer<typeof outletTypeSchema>;
+
 export const createCustomerSchema = z.object({
   outletName: z.string().trim().min(1, 'Outlet name is required').max(120),
   address: z.string().trim().min(1, 'Address is required').max(240),
   route: z.string().trim().min(1, 'Route is required').max(60),
   gstin: gstinSchema.optional(),
-  // E.164; also used as the WhatsApp number.
+  // Primary contact number (E.164).
   phone: phoneSchema,
+  // Optional WhatsApp number if different from the contact number.
+  whatsapp: phoneSchema.optional(),
+  paymentTerms: z.string().trim().max(120).optional(),
+  outletType: outletTypeSchema.default('EXISTING'),
+  salesOfficerId: z.string().min(1).optional(),
 });
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
@@ -46,5 +54,15 @@ export interface CustomerDto {
   route: string | null;
   gstin: string | null;
   phone: string;
+  whatsapp: string | null;
+  paymentTerms: string | null;
+  outletType: OutletType;
+  salesOfficer: string | null;
   createdAt: string;
+}
+
+export interface SalesRepDto {
+  id: string;
+  name: string;
+  phone: string;
 }

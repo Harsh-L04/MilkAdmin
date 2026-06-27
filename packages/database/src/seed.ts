@@ -126,6 +126,24 @@ async function main() {
     create: { distributorId: distributor.id, name: 'Route A', sequence: 1 },
   });
 
+  // Sales team (field reps who bring outlets into the network).
+  const salesReps = [
+    { phone: '+919000000010', name: 'Amit Verma' },
+    { phone: '+919000000011', name: 'Priya Nair' },
+  ];
+  for (const rep of salesReps) {
+    await prisma.user.upsert({
+      where: { phone: rep.phone },
+      update: { distributorId: distributor.id },
+      create: {
+        phone: rep.phone,
+        name: rep.name,
+        role: Role.SALES_OFFICER,
+        distributorId: distributor.id,
+      },
+    });
+  }
+
   // Retailer user + retailer + account
   const retailerUser = await prisma.user.upsert({
     where: { phone: '+919000000003' },

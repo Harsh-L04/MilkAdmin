@@ -191,4 +191,39 @@ export const api = {
     review: (input: ReviewOrderInput) =>
       request<OrderDto>('/orders/review', { method: 'POST', body: input }),
   },
+  admin: {
+    distributors: (signal?: AbortSignal) =>
+      request<DistributorRow[]>('/admin/distributors', { signal }),
+    retailers: (signal?: AbortSignal) =>
+      request<RetailerRow[]>('/admin/retailers', { signal }),
+  },
 };
+
+// --- Registry DTOs (company-wide directory) --------------------------------
+export interface DistributorRow {
+  id: string;
+  name: string;
+  code: string;
+  region: string | null;
+  address: string | null;
+  status: string;
+  outlets: number;
+  routes: number;
+}
+
+export interface RetailerRow {
+  id: string;
+  outletName: string;
+  contactName: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  route: string | null;
+  distributor: string | null;
+  salesOfficer: string | null;
+  outletType: 'NEW' | 'EXISTING';
+  paymentTerms: string | null;
+  gstin: string | null;
+  address: string | null;
+  status: string;
+  createdAt: string;
+}
