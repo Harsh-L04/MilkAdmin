@@ -39,6 +39,19 @@ export const reviewOrderSchema = z.object({
 });
 export type ReviewOrderInput = z.infer<typeof reviewOrderSchema>;
 
+// Forward lifecycle after approval (handled by the order state machine).
+export const advanceOrderSchema = z.object({
+  orderId: cuid,
+  toStatus: z.enum([
+    'IN_PRODUCTION',
+    'DISPATCHED',
+    'DELIVERED',
+    'SETTLED',
+    'CANCELLED',
+  ]),
+});
+export type AdvanceOrderInput = z.infer<typeof advanceOrderSchema>;
+
 export const standingOrderItemSchema = z.object({
   productId: cuid,
   qty: decimalString.refine((v) => Number(v) > 0, 'Quantity must be positive'),

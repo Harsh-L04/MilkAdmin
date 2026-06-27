@@ -4,6 +4,7 @@ import type {
   ListProductsQuery,
   CreateOrderInput,
   ReviewOrderInput,
+  AdvanceOrderInput,
   OrderStatus,
 } from '@moderns-milk/contracts';
 import { clearTokens, getTokens, setTokens } from './tokens';
@@ -190,6 +191,8 @@ export const api = {
       request<OrderDto>(`/orders/${id}/submit`, { method: 'POST' }),
     review: (input: ReviewOrderInput) =>
       request<OrderDto>('/orders/review', { method: 'POST', body: input }),
+    advance: (input: AdvanceOrderInput) =>
+      request<OrderDto>('/orders/advance', { method: 'POST', body: input }),
   },
   admin: {
     distributors: (signal?: AbortSignal) =>

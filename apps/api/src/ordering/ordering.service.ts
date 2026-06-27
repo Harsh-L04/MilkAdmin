@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@moderns-milk/database';
 import {
+  AdvanceOrderInput,
   CreateOrderInput,
   ReviewOrderInput,
 } from '@moderns-milk/contracts';
@@ -379,6 +380,56 @@ export class OrderingService {
   async getOrder(user: AuthenticatedUser, orderId: string) {
     const order = await this.loadOrderForActor(user, orderId);
     return order;
+  }
+
+  async advanceOrder(user: AuthenticatedUser, input: AdvanceOrderInput) {
+    const order = await this.loadOrderForActor(user, input.orderId);
+    if (!canAccessDistributorResource(user, order.distributorId)) {
+      throw new ForbiddenException('Out of scope');
+    }
+    assertTransition(order.status, input.toStatus);
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status: input.toStatus },
+      });
+      // Capture quantities as the order physically moves.
+      if (input.toStatus === 'DISPATCHED') {
+        for (const item of order.items) {
+          await tx.orderItem.update({
+            where: { id: item.id },
+            data: { qtyDispatched: item.qtyApproved ?? item.qtyOrdered },
+          });
+        }
+      }
+      if (input.toStatus === 'DELIVERED') {
+        for (const item of order.items) {
+          await tx.orderItem.update({
+            where: { id: item.id },
+            data: {
+              qtyDelivered:
+                item.qtyDispatched ?? item.qtyApproved ?? item.qtyOrdered,
+            },
+          });
+        }
+      }
+      await this.audit.record(
+        {
+          actorId: user.userId,
+          action: `ORDER_${input.toStatus}`,
+          entity: 'Order',
+          entityId: order.id,
+          before: { status: order.status },
+          after: { status: input.toStatus },
+        },
+        tx,
+      );
+      return tx.order.findUniqueOrThrow({
+        where: { id: order.id },
+        include: { items: true },
+      });
+    });
   }
 
   async listOrders(user: AuthenticatedUser) {
