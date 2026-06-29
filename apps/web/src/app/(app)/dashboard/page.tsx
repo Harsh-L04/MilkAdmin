@@ -11,9 +11,14 @@ import {
   ArrowRight,
   Activity,
   AlertCircle,
+  Wallet,
+  Footprints,
+  Target,
+  Users,
 } from 'lucide-react';
 import { useOrders } from '@/features/orders/use-orders';
 import { useProducts } from '@/features/catalog/use-products';
+import { useDashboardStats } from '@/features/dashboard/use-dashboard';
 import { deriveDashboard } from '@/features/dashboard/metrics';
 import { ORDER_STATUS_META } from '@/lib/status';
 import { formatMoney, formatMoneyCompact, formatNumber, formatRelative } from '@/lib/format';
@@ -34,6 +39,9 @@ export default function DashboardPage() {
   const ordersQ = useOrders();
   const productsQ = useProducts({ active: true });
 
+  const statsQ = useDashboardStats();
+  const stats = statsQ.data;
+  const statsLoading = statsQ.isLoading;
   const loading = ordersQ.isLoading || productsQ.isLoading;
   const summary = React.useMemo(
     () => deriveDashboard(ordersQ.data ?? [], productsQ.data ?? []),
@@ -90,6 +98,66 @@ export default function DashboardPage() {
           loading={loading}
         />
       </section>
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Outstanding dues"
+          value={formatMoneyCompact(Number(stats?.dues.outstanding ?? 0))}
+          icon={Wallet}
+          hint={`${formatNumber(stats?.dues.outletsWithDues ?? 0)} outlets owe`}
+          loading={statsLoading}
+        />
+        <KpiCard
+          label="Sales visits · 30d"
+          value={formatNumber(stats?.visits.count ?? 0)}
+          icon={Footprints}
+          hint={`${formatNumber(stats?.visits.newOutlets ?? 0)} new outlets`}
+          loading={statsLoading}
+        />
+        <KpiCard
+          label="Strike rate"
+          value={`${stats?.visits.strikeRatePct ?? 0}%`}
+          icon={Target}
+          hint="Visits that booked an order"
+          loading={statsLoading}
+        />
+        <KpiCard
+          label="Network"
+          value={formatNumber(stats?.network.outlets ?? 0)}
+          icon={Users}
+          hint={`${formatNumber(stats?.network.distributors ?? 0)} distributors · ${formatNumber(
+            stats?.network.salesReps ?? 0,
+          )} reps`}
+          loading={statsLoading}
+        />
+      </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Top products by value</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {statsLoading ? (
+            Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)
+          ) : (stats?.topSkus.length ?? 0) === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">No sales yet.</p>
+          ) : (
+            stats?.topSkus.map((s, i) => (
+              <div
+                key={s.productId}
+                className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-0"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="w-5 text-sm font-medium text-muted-foreground">{i + 1}</span>
+                  <span className="truncate text-sm font-medium">{s.name}</span>
+                  <span className="text-xs text-muted-foreground">{formatNumber(s.qty)} units</span>
+                </div>
+                <span className="font-medium tabular-nums">{formatMoney(s.value)}</span>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">

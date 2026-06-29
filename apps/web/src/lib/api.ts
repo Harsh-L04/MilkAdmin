@@ -197,6 +197,8 @@ export const api = {
       request<OrderDto>('/orders/advance', { method: 'POST', body: input }),
   },
   admin: {
+    dashboard: (signal?: AbortSignal) =>
+      request<DashboardStats>('/admin/dashboard', { signal }),
     distributors: (signal?: AbortSignal) =>
       request<DistributorRow[]>('/admin/distributors', { signal }),
     retailers: (signal?: AbortSignal) =>
@@ -229,6 +231,18 @@ export interface SalesVisitRow {
   orderId: string | null;
   orderTotal: string | null;
   createdAt: string;
+}
+
+export interface DashboardStats {
+  network: { distributors: number; outlets: number; salesReps: number };
+  dues: { outstanding: string; outletsWithDues: number };
+  visits: {
+    count: number;
+    newOutlets: number;
+    withOrder: number;
+    strikeRatePct: number;
+  };
+  topSkus: { productId: string; name: string; qty: number; value: string }[];
 }
 
 // --- Registry DTOs (company-wide directory) --------------------------------
