@@ -20,9 +20,6 @@ function SidebarPanel({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex-1 overflow-y-auto px-3 py-5">
         <SidebarNav onNavigate={onNavigate} />
       </div>
-      <div className="border-t border-white/10 p-4">
-        <p className="text-[11px] text-brand-foreground/40">v0.1 · Slice 1</p>
-      </div>
     </div>
   );
 }
