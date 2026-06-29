@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ReviewOrderInput } from '@moderns-milk/contracts';
+import type { ReviewOrderInput, AdvanceOrderInput } from '@moderns-milk/contracts';
 import { api } from '@/lib/api';
 
 export function useOrders() {
@@ -24,6 +24,18 @@ export function useReviewOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: ReviewOrderInput) => api.orders.review(input),
+    onSuccess: (order) => {
+      qc.invalidateQueries({ queryKey: ['orders'] });
+      qc.setQueryData(['orders', order.id], order);
+    },
+  });
+}
+
+/** Advance an approved order along the fulfillment lifecycle. */
+export function useAdvanceOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AdvanceOrderInput) => api.orders.advance(input),
     onSuccess: (order) => {
       qc.invalidateQueries({ queryKey: ['orders'] });
       qc.setQueryData(['orders', order.id], order);

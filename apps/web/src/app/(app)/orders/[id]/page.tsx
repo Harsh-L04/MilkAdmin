@@ -4,8 +4,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Check, X, Receipt, Truck, CalendarDays, Boxes, FileX2 } from 'lucide-react';
-import type { Role } from '@moderns-milk/contracts';
-import { useOrder } from '@/features/orders/use-orders';
+import type { Role, AdvanceOrderInput } from '@moderns-milk/contracts';
+import { useOrder, useAdvanceOrder } from '@/features/orders/use-orders';
 import { useProducts } from '@/features/catalog/use-products';
 import { ReviewDialog } from '@/features/orders/review-dialog';
 import { useAuth } from '@/lib/auth-context';
@@ -67,8 +67,18 @@ export default function OrderDetailPage() {
     [products],
   );
 
-  const canReview =
-    order?.status === 'SUBMITTED' && role !== null && REVIEW_ROLES.includes(role);
+  const advanceMut = useAdvanceOrder();
+
+  const canManage = role !== null && REVIEW_ROLES.includes(role);
+  const canReview = order?.status === 'SUBMITTED' && canManage;
+
+  const NEXT_STEP: Partial<Record<string, { to: AdvanceOrderInput['toStatus']; label: string }>> = {
+    APPROVED: { to: 'IN_PRODUCTION', label: 'Start production' },
+    IN_PRODUCTION: { to: 'DISPATCHED', label: 'Mark dispatched' },
+    DISPATCHED: { to: 'DELIVERED', label: 'Mark delivered' },
+    DELIVERED: { to: 'SETTLED', label: 'Mark settled' },
+  };
+  const nextStep = order ? NEXT_STEP[order.status] : undefined;
 
   if (isLoading) {
     return (
@@ -127,6 +137,17 @@ export default function OrderDetailPage() {
                 </Button>
               </>
             )}
+            {canManage && nextStep ? (
+              <Button
+                size="sm"
+                disabled={advanceMut.isPending}
+                onClick={() =>
+                  advanceMut.mutate({ orderId: order.id, toStatus: nextStep.to })
+                }
+              >
+                <Truck /> {nextStep.label}
+              </Button>
+            ) : null}
           </div>
         }
       />

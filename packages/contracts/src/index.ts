@@ -4,3 +4,4 @@ export * from './catalog';
 export * from './ordering';
 export * from './distributor';
 export * from './sales-visit';
+export * from './ledger';

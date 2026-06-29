@@ -6,8 +6,10 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  AdvanceOrderInput,
   CreateOrderInput,
   ReviewOrderInput,
+  advanceOrderSchema,
   createOrderSchema,
   reviewOrderSchema,
 } from '@moderns-milk/contracts';
@@ -48,6 +50,15 @@ export class OrderingController {
     @Body(new ZodValidationPipe(reviewOrderSchema)) body: ReviewOrderInput,
   ) {
     return this.ordering.reviewOrder(user, body);
+  }
+
+  @Post('advance')
+  @Roles('DISTRIBUTOR', 'SALES_OFFICER', 'SALES_HEAD', 'ADMIN')
+  advance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(advanceOrderSchema)) body: AdvanceOrderInput,
+  ) {
+    return this.ordering.advanceOrder(user, body);
   }
 
   @Get()

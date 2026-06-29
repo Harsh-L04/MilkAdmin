@@ -1,8 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { Store, FileX2 } from 'lucide-react';
 import { useRetailers } from '@/features/network/use-network';
+import { formatMoney } from '@/lib/format';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { SearchInput } from '@/components/ui/search-input';
@@ -26,6 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
 export default function RetailersPage() {
+  const router = useRouter();
   const { data, isLoading, isError, error, refetch } = useRetailers();
   const [search, setSearch] = React.useState('');
   const [distributor, setDistributor] = React.useState<string>('ALL');
@@ -122,12 +125,17 @@ export default function RetailersPage() {
                   <TableHead>Route</TableHead>
                   <TableHead>Distributor</TableHead>
                   <TableHead>Sales rep</TableHead>
+                  <TableHead className="text-right">Dues</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow
+                    key={r.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/retailers/${r.id}`)}
+                  >
                     <TableCell>
                       <p className="font-medium">{r.outletName}</p>
                       {r.address ? (
@@ -141,6 +149,13 @@ export default function RetailersPage() {
                     <TableCell className="text-sm">{r.distributor ?? '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {r.salesOfficer ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {Number(r.balance) > 0 ? (
+                        <span className="text-destructive">{formatMoney(r.balance)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">{formatMoney(r.balance)}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={r.status === 'ACTIVE' ? 'success' : 'muted'}>
