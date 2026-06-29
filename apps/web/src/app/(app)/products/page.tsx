@@ -1,11 +1,24 @@
 'use client';
 
 import * as React from 'react';
-import { Package, PackageX, RotateCcw } from 'lucide-react';
+import {
+  Ban,
+  CheckCircle2,
+  MoreHorizontal,
+  Package,
+  PackageX,
+  Pencil,
+  Plus,
+  RotateCcw,
+} from 'lucide-react';
 import type { ProductCategory, ProductDto } from '@moderns-milk/contracts';
-import { useProducts } from '@/features/catalog/use-products';
+import { useProducts, useUpdateProduct } from '@/features/catalog/use-products';
+import { ProductFormDialog } from '@/features/catalog/product-form-dialog';
+import { ApiError } from '@/lib/api';
 import { formatQty, humanizeEnum } from '@/lib/format';
+import { useToast } from '@/hooks/use-toast';
 import { PageHeader } from '@/components/layout/page-header';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
@@ -18,6 +31,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -74,11 +101,32 @@ export default function ProductsPage() {
     );
   }, [data, search]);
 
+  // Create / edit dialog: `editing === null` while closed, a product when
+  // editing, and `undefined` (with formOpen) when creating.
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<ProductDto | null>(null);
+  const [toggling, setToggling] = React.useState<ProductDto | null>(null);
+
+  const openCreate = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+  const openEdit = (p: ProductDto) => {
+    setEditing(p);
+    setFormOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Products"
         description="Catalog of milk and dairy SKUs available for ordering."
+        actions={
+          <Button onClick={openCreate}>
+            <Plus />
+            Add product
+          </Button>
+        }
       />
 
       <Card>
@@ -151,6 +199,9 @@ export default function ProductsPage() {
                       <TableHead>Pack size</TableHead>
                       <TableHead>Tax</TableHead>
                       <TableHead>Attributes</TableHead>
+                      <TableHead className="w-12 text-right">
+                        <span className="sr-only">Actions</span>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -167,6 +218,13 @@ export default function ProductsPage() {
                         <TableCell>
                           <ProductMeta p={p} />
                         </TableCell>
+                        <TableCell className="text-right">
+                          <RowActions
+                            product={p}
+                            onEdit={() => openEdit(p)}
+                            onToggle={() => setToggling(p)}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -182,9 +240,16 @@ export default function ProductsPage() {
                         <p className="font-medium">{p.name}</p>
                         <p className="font-mono text-xs text-muted-foreground">{p.sku}</p>
                       </div>
-                      <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                        {formatQty(p.packSize)} {humanizeEnum(p.uom)}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-sm tabular-nums text-muted-foreground">
+                          {formatQty(p.packSize)} {humanizeEnum(p.uom)}
+                        </span>
+                        <RowActions
+                          product={p}
+                          onEdit={() => openEdit(p)}
+                          onToggle={() => setToggling(p)}
+                        />
+                      </div>
                     </div>
                     <ProductMeta p={p} />
                   </li>
@@ -200,6 +265,107 @@ export default function ProductsPage() {
           Showing {filtered.length} product{filtered.length === 1 ? '' : 's'}
         </p>
       )}
+
+      <ProductFormDialog
+        open={formOpen}
+        product={editing}
+        onClose={() => setFormOpen(false)}
+      />
+
+      <ToggleActiveDialog product={toggling} onClose={() => setToggling(null)} />
     </div>
+  );
+}
+
+function RowActions({
+  product,
+  onEdit,
+  onToggle,
+}: {
+  product: ProductDto;
+  onEdit: () => void;
+  onToggle: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={`Actions for ${product.name}`}
+        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <MoreHorizontal className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={onEdit}>
+          <Pencil />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onToggle}>
+          {product.active ? <Ban /> : <CheckCircle2 />}
+          {product.active ? 'Deactivate' : 'Activate'}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ToggleActiveDialog({
+  product,
+  onClose,
+}: {
+  product: ProductDto | null;
+  onClose: () => void;
+}) {
+  const updateMut = useUpdateProduct();
+  const { toast } = useToast();
+  const deactivating = product?.active ?? false;
+
+  async function confirm() {
+    if (!product) return;
+    try {
+      await updateMut.mutateAsync({ id: product.id, input: { active: !product.active } });
+      toast({
+        variant: 'success',
+        title: deactivating ? 'Product deactivated' : 'Product activated',
+        description: `${product.name} (${product.sku}) updated.`,
+      });
+      onClose();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Action failed',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    }
+  }
+
+  return (
+    <Dialog open={Boolean(product)} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {deactivating ? 'Deactivate this product?' : 'Activate this product?'}
+          </DialogTitle>
+          <DialogDescription>
+            {product?.name} ({product?.sku}).{' '}
+            {deactivating
+              ? 'It will be hidden from ordering but kept for historical records. You can reactivate it anytime.'
+              : 'It will become available for ordering again.'}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={updateMut.isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant={deactivating ? 'destructive' : 'primary'}
+            onClick={confirm}
+            loading={updateMut.isPending}
+          >
+            {deactivating ? <Ban /> : <CheckCircle2 />}
+            {deactivating ? 'Deactivate' : 'Activate'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

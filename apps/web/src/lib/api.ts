@@ -2,6 +2,8 @@ import type {
   AuthTokens,
   ProductDto,
   ListProductsQuery,
+  UpsertProductInput,
+  UpdateProductInput,
   CreateOrderInput,
   ReviewOrderInput,
   AdvanceOrderInput,
@@ -182,6 +184,10 @@ export const api = {
   catalog: {
     listProducts: (query: ListProductsQuery = {}, signal?: AbortSignal) =>
       request<ProductDto[]>(`/catalog/products${buildQuery(query)}`, { signal }),
+    createProduct: (input: UpsertProductInput) =>
+      request<ProductDto>('/catalog/products', { method: 'POST', body: input }),
+    updateProduct: (id: string, input: UpdateProductInput) =>
+      request<ProductDto>(`/catalog/products/${id}`, { method: 'PATCH', body: input }),
   },
   orders: {
     list: (signal?: AbortSignal) => request<OrderDto[]>('/orders', { signal }),
