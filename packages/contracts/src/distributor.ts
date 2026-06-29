@@ -47,6 +47,27 @@ export const createCustomerSchema = z.object({
 });
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
+// Soft-delete is modelled on the retailer's status — SUSPENDED hides the outlet
+// from active operations while preserving its orders and ledger.
+export const customerStatusSchema = z.enum(['ACTIVE', 'SUSPENDED']);
+export type CustomerStatus = z.infer<typeof customerStatusSchema>;
+
+// Editable fields for an existing outlet. Phone is intentionally omitted — it is
+// the retailer's unique login key and is changed through a separate flow.
+export const updateCustomerSchema = z
+  .object({
+    outletName: z.string().trim().min(1).max(120),
+    address: z.string().trim().min(1).max(240),
+    route: z.string().trim().min(1).max(60),
+    gstin: gstinSchema,
+    whatsapp: phoneSchema,
+    paymentTerms: z.string().trim().max(120),
+    outletType: outletTypeSchema,
+    status: customerStatusSchema,
+  })
+  .partial();
+export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
+
 export interface CustomerDto {
   id: string;
   outletName: string;
@@ -58,6 +79,7 @@ export interface CustomerDto {
   paymentTerms: string | null;
   outletType: OutletType;
   salesOfficer: string | null;
+  status: CustomerStatus;
   createdAt: string;
 }
 
