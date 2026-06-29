@@ -6,6 +6,8 @@ import type {
   ReviewOrderInput,
   AdvanceOrderInput,
   OrderStatus,
+  OutletLedgerDto,
+  RecordCollectionInput,
 } from '@moderns-milk/contracts';
 import { clearTokens, getTokens, setTokens } from './tokens';
 
@@ -204,6 +206,12 @@ export const api = {
     list: (signal?: AbortSignal) =>
       request<SalesVisitRow[]>('/sales-visits', { signal }),
   },
+  ledger: {
+    get: (retailerId: string, signal?: AbortSignal) =>
+      request<OutletLedgerDto>(`/customers/${retailerId}/ledger`, { signal }),
+    collect: (input: RecordCollectionInput) =>
+      request<OutletLedgerDto>('/collections', { method: 'POST', body: input }),
+  },
 };
 
 export interface SalesVisitRow {
@@ -248,6 +256,8 @@ export interface RetailerRow {
   paymentTerms: string | null;
   gstin: string | null;
   address: string | null;
+  balance: string;
+  creditLimit: string;
   status: string;
   createdAt: string;
 }

@@ -35,6 +35,7 @@ export class AdminService {
         route: { select: { name: true } },
         user: { select: { name: true, phone: true } },
         salesOfficer: { select: { name: true } },
+        account: { select: { balance: true, creditLimit: true } },
       },
     });
     return rows.map((r) => ({
@@ -50,6 +51,8 @@ export class AdminService {
       paymentTerms: r.paymentTerms,
       gstin: r.gstin,
       address: r.addressLine,
+      balance: (r.account?.balance ?? 0).toString(),
+      creditLimit: (r.account?.creditLimit ?? 0).toString(),
       status: r.status,
       createdAt: r.createdAt,
     }));
