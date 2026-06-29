@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateCustomerInput, UpdateProfileInput } from '@moderns-milk/contracts';
+import {
+  CreateCustomerInput,
+  CustomerStatus,
+  UpdateCustomerInput,
+  UpdateProfileInput,
+} from '@moderns-milk/contracts';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../common/auth/current-user.decorator';
 
@@ -16,6 +21,7 @@ interface RetailerWithRefs {
   whatsapp: string | null;
   paymentTerms: string | null;
   outletType: 'NEW' | 'EXISTING';
+  status: string;
   createdAt: Date;
   route: { name: string } | null;
   user: { phone: string } | null;
@@ -153,6 +159,65 @@ export class DistributorService {
     return this.toCustomerDto(retailer);
   }
 
+  async updateCustomer(
+    user: AuthenticatedUser,
+    id: string,
+    input: UpdateCustomerInput,
+  ) {
+    const retailer = await this.prisma.retailer.findUnique({
+      where: { id },
+      include: RETAILER_INCLUDE,
+    });
+    if (!retailer) {
+      throw new NotFoundException('Outlet not found');
+    }
+
+    // HQ roles edit any outlet; a distributor's reps only their own.
+    const isHq = user.role === 'ADMIN' || user.role === 'SALES_HEAD';
+    if (!isHq && retailer.distributorId !== user.distributorId) {
+      throw new ForbiddenException('This outlet is not in your scope');
+    }
+
+    // Route is free-text per distributor: find-or-create under the outlet's own
+    // distributor (not the editor's, so HQ edits attach to the right network).
+    let routeId: string | undefined;
+    if (input.route !== undefined) {
+      let route = await this.prisma.route.findFirst({
+        where: { distributorId: retailer.distributorId, name: input.route },
+      });
+      if (!route) {
+        const count = await this.prisma.route.count({
+          where: { distributorId: retailer.distributorId },
+        });
+        route = await this.prisma.route.create({
+          data: {
+            distributorId: retailer.distributorId,
+            name: input.route,
+            sequence: count + 1,
+          },
+        });
+      }
+      routeId = route.id;
+    }
+
+    const updated = await this.prisma.retailer.update({
+      where: { id },
+      data: {
+        shopName: input.outletName,
+        addressLine: input.address,
+        routeId,
+        gstin: input.gstin,
+        whatsapp: input.whatsapp,
+        paymentTerms: input.paymentTerms,
+        outletType: input.outletType,
+        status: input.status,
+      },
+      include: RETAILER_INCLUDE,
+    });
+
+    return this.toCustomerDto(updated);
+  }
+
   private toCustomerDto(r: RetailerWithRefs) {
     return {
       id: r.id,
@@ -165,6 +230,7 @@ export class DistributorService {
       paymentTerms: r.paymentTerms,
       outletType: r.outletType,
       salesOfficer: r.salesOfficer?.name ?? null,
+      status: (r.status === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE') as CustomerStatus,
       createdAt: r.createdAt,
     };
   }

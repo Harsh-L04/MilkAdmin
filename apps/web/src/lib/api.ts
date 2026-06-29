@@ -10,6 +10,8 @@ import type {
   OrderStatus,
   OutletLedgerDto,
   RecordCollectionInput,
+  CustomerDto,
+  UpdateCustomerInput,
 } from '@moderns-milk/contracts';
 import { clearTokens, getTokens, setTokens } from './tokens';
 
@@ -209,6 +211,10 @@ export const api = {
       request<DistributorRow[]>('/admin/distributors', { signal }),
     retailers: (signal?: AbortSignal) =>
       request<RetailerRow[]>('/admin/retailers', { signal }),
+  },
+  retailers: {
+    update: (id: string, input: UpdateCustomerInput) =>
+      request<CustomerDto>(`/customers/${id}`, { method: 'PATCH', body: input }),
   },
   salesVisits: {
     list: (signal?: AbortSignal) =>

@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import {
   CreateCustomerInput,
+  UpdateCustomerInput,
   UpdateProfileInput,
   createCustomerSchema,
+  updateCustomerSchema,
   updateProfileSchema,
 } from '@moderns-milk/contracts';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -51,5 +53,17 @@ export class DistributorController {
     @Body(new ZodValidationPipe(createCustomerSchema)) body: CreateCustomerInput,
   ) {
     return this.distributor.createCustomer(user, body);
+  }
+
+  // HQ roles may edit any outlet; distributor reps only their own (enforced in
+  // the service). Also performs deactivate/restore via { status }.
+  @Patch('customers/:id')
+  @Roles('ADMIN', 'SALES_HEAD', 'DISTRIBUTOR', 'SALES_OFFICER')
+  updateCustomer(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateCustomerSchema)) body: UpdateCustomerInput,
+  ) {
+    return this.distributor.updateCustomer(user, id, body);
   }
 }

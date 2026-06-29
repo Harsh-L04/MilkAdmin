@@ -2,10 +2,14 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Store, FileX2 } from 'lucide-react';
-import { useRetailers } from '@/features/network/use-network';
+import { Ban, CheckCircle2, FileX2, MoreHorizontal, Pencil, Store } from 'lucide-react';
+import { useRetailers, useUpdateRetailer } from '@/features/network/use-network';
+import { RetailerFormDialog } from '@/features/network/retailer-form-dialog';
+import { ApiError, type RetailerRow } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
+import { useToast } from '@/hooks/use-toast';
 import { PageHeader } from '@/components/layout/page-header';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SearchInput } from '@/components/ui/search-input';
 import {
@@ -23,6 +27,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +50,14 @@ export default function RetailersPage() {
   const { data, isLoading, isError, error, refetch } = useRetailers();
   const [search, setSearch] = React.useState('');
   const [distributor, setDistributor] = React.useState<string>('ALL');
+  const [editing, setEditing] = React.useState<RetailerRow | null>(null);
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [toggling, setToggling] = React.useState<RetailerRow | null>(null);
+
+  const openEdit = (r: RetailerRow) => {
+    setEditing(r);
+    setFormOpen(true);
+  };
 
   const distributors = React.useMemo(
     () => Array.from(new Set((data ?? []).map((r) => r.distributor).filter(Boolean))) as string[],
@@ -127,6 +153,9 @@ export default function RetailersPage() {
                   <TableHead>Sales rep</TableHead>
                   <TableHead className="text-right">Dues</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-12 text-right">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -162,6 +191,16 @@ export default function RetailersPage() {
                         {r.status}
                       </Badge>
                     </TableCell>
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <RowActions
+                        retailer={r}
+                        onEdit={() => openEdit(r)}
+                        onToggle={() => setToggling(r)}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -169,6 +208,111 @@ export default function RetailersPage() {
           )}
         </CardContent>
       </Card>
+
+      <RetailerFormDialog
+        open={formOpen}
+        retailer={editing}
+        onClose={() => setFormOpen(false)}
+      />
+
+      <ToggleStatusDialog retailer={toggling} onClose={() => setToggling(null)} />
     </div>
+  );
+}
+
+function RowActions({
+  retailer,
+  onEdit,
+  onToggle,
+}: {
+  retailer: RetailerRow;
+  onEdit: () => void;
+  onToggle: () => void;
+}) {
+  const active = retailer.status === 'ACTIVE';
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={`Actions for ${retailer.outletName}`}
+        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <MoreHorizontal className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={onEdit}>
+          <Pencil />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onToggle}>
+          {active ? <Ban /> : <CheckCircle2 />}
+          {active ? 'Deactivate' : 'Activate'}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ToggleStatusDialog({
+  retailer,
+  onClose,
+}: {
+  retailer: RetailerRow | null;
+  onClose: () => void;
+}) {
+  const updateMut = useUpdateRetailer();
+  const { toast } = useToast();
+  const deactivating = retailer?.status === 'ACTIVE';
+
+  async function confirm() {
+    if (!retailer) return;
+    try {
+      await updateMut.mutateAsync({
+        id: retailer.id,
+        input: { status: deactivating ? 'SUSPENDED' : 'ACTIVE' },
+      });
+      toast({
+        variant: 'success',
+        title: deactivating ? 'Outlet deactivated' : 'Outlet activated',
+        description: `${retailer.outletName} updated.`,
+      });
+      onClose();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Action failed',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    }
+  }
+
+  return (
+    <Dialog open={Boolean(retailer)} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {deactivating ? 'Deactivate this outlet?' : 'Activate this outlet?'}
+          </DialogTitle>
+          <DialogDescription>
+            {retailer?.outletName}.{' '}
+            {deactivating
+              ? 'It will be hidden from active operations but its orders and ledger are kept. You can reactivate it anytime.'
+              : 'It will return to active operations.'}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={updateMut.isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant={deactivating ? 'destructive' : 'primary'}
+            onClick={confirm}
+            loading={updateMut.isPending}
+          >
+            {deactivating ? <Ban /> : <CheckCircle2 />}
+            {deactivating ? 'Deactivate' : 'Activate'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
