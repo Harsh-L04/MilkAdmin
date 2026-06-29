@@ -20,6 +20,7 @@ import {
 import { assertTransition } from './domain/order-state-machine';
 import { isWindowOpen, pickOpenWindow } from './domain/cutoff';
 import { evaluateApproval } from './domain/auto-approval';
+import { LedgerService } from '../ledger/ledger.service';
 
 const Decimal = Prisma.Decimal;
 type Decimal = Prisma.Decimal;
@@ -31,6 +32,7 @@ export class OrderingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly ledger: LedgerService,
   ) {}
 
   // -- pricing ---------------------------------------------------------------
@@ -413,6 +415,16 @@ export class OrderingService {
             },
           });
         }
+        // Delivery creates the dues: debit the outlet's ledger for the total.
+        await this.ledger.postWithinTx(
+          tx,
+          order.retailerId,
+          'DEBIT',
+          order.total,
+          'ORDER',
+          order.id,
+          `Order #${order.id.slice(-6).toUpperCase()}`,
+        );
       }
       await this.audit.record(
         {

@@ -12,6 +12,7 @@ import { DistributorModule } from './distributor/distributor.module';
 import { AdminModule } from './admin/admin.module';
 import { SalesVisitModule } from './sales-visit/sales-visit.module';
 import { StandingModule } from './standing/standing.module';
+import { LedgerModule } from './ledger/ledger.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -28,6 +29,7 @@ import { HealthController } from './health.controller';
     AdminModule,
     SalesVisitModule,
     StandingModule,
+    LedgerModule,
   ],
   controllers: [HealthController],
   providers: [
