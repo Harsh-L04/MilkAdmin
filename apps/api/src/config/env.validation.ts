@@ -14,7 +14,13 @@ const envSchema = z.object({
   OTP_TTL: z.coerce.number().int().default(300),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().default(5),
   OTP_RESEND_COOLDOWN: z.coerce.number().int().default(60),
+  // Dedicated key for hashing OTPs at rest. Falls back to JWT_ACCESS_SECRET if
+  // unset so existing deploys keep working; set a distinct value in production.
+  OTP_HMAC_SECRET: z.string().min(16).optional(),
   SMS_PROVIDER: z.enum(['console', 'twilio', 'msg91']).default('console'),
+  // Global rate limit: max requests per client per window (seconds), per route.
+  THROTTLE_LIMIT: z.coerce.number().int().default(120),
+  THROTTLE_TTL: z.coerce.number().int().default(60),
 });
 
 export type Env = z.infer<typeof envSchema>;

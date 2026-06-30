@@ -19,6 +19,7 @@ import {
   CurrentUser,
   AuthenticatedUser,
 } from '../common/auth/current-user.decorator';
+import { Idempotent } from '../common/idempotency/idempotency.decorator';
 import { OrderingService } from './ordering.service';
 
 @Controller('orders')
@@ -26,6 +27,7 @@ export class OrderingController {
   constructor(private readonly ordering: OrderingService) {}
 
   @Post()
+  @Idempotent()
   @Roles('DISTRIBUTOR', 'RETAILER')
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -35,6 +37,7 @@ export class OrderingController {
   }
 
   @Post(':id/submit')
+  @Idempotent()
   @Roles('DISTRIBUTOR', 'RETAILER')
   submit(
     @CurrentUser() user: AuthenticatedUser,

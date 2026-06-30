@@ -23,6 +23,7 @@ import {
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { Public } from '../common/auth/jwt-auth.guard';
 import { CurrentUser, AuthenticatedUser } from '../common/auth/current-user.decorator';
+import { Throttle } from '../common/throttle/throttle.decorator';
 import { AuthService } from './auth.service';
 
 /** Name of the httpOnly refresh cookie used by browser clients. */
@@ -41,6 +42,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ limit: 5, ttlSec: 60 })
   @Post('otp/request')
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(requestOtpSchema))
@@ -51,6 +53,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ limit: 10, ttlSec: 60 })
   @Post('otp/verify')
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(verifyOtpSchema))
@@ -64,6 +67,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ limit: 30, ttlSec: 60 })
   @Post('refresh')
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(refreshSchema))

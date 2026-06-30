@@ -48,7 +48,10 @@ export class OtpService {
   }
 
   private hash(phone: string, code: string): string {
-    const secret = this.config.getOrThrow<string>('JWT_ACCESS_SECRET');
+    // Prefer a dedicated OTP key; fall back to the JWT secret for back-compat.
+    const secret =
+      this.config.get<string>('OTP_HMAC_SECRET') ??
+      this.config.getOrThrow<string>('JWT_ACCESS_SECRET');
     return createHmac('sha256', secret).update(`${phone}:${code}`).digest('hex');
   }
 
