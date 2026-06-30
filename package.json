@@ -21,14 +21,14 @@
     "infra:down": "docker compose down"
   },
   "devDependencies": {
-    "turbo": "^2.3.3",
     "typescript": "^5.7.2",
     "@types/node": "^22.10.2"
   },
   "dependencies": {
     "next": "^15.1.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "turbo": "^2.3.3"
   },
   "engines": {
     "node": ">=20"
