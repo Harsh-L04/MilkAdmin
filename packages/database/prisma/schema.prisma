@@ -95,6 +95,13 @@ enum OrderSource {
   MANUAL
 }
 
+// Retailer order vs a distributor self-order for hawkers / individual
+// deliveries (spec §2.5-2.7). Both follow the same approval flow.
+enum OrderType {
+  RETAILER
+  SELF
+}
+
 enum ApprovalType {
   AUTO
   MANUAL
@@ -145,6 +152,8 @@ model User {
   salesVisits          SalesVisit[]  @relation("VisitSalesOfficer")
   sampleOrders         SampleOrder[] @relation("SampleOrderPlacedBy")
   recordedPayments     PaymentLog[]  @relation("PaymentRecordedBy")
+  approvedOrders       Order[]       @relation("OrderApprovedBy")
+  rejectedOrders       Order[]       @relation("OrderRejectedBy")
   auditLogs            AuditLog[]
 
   createdAt DateTime @default(now())
@@ -406,8 +415,16 @@ model Order {
 
   status       OrderStatus   @default(DRAFT)
   source       OrderSource   @default(MANUAL)
+  orderType    OrderType     @default(RETAILER)
   approvalType ApprovalType?
+
+  // Review metadata (spec §4.1.5) — who approved/rejected, why, and when.
   approvedById String?
+  approvedBy   User?     @relation("OrderApprovedBy", fields: [approvedById], references: [id])
+  rejectedById String?
+  rejectedBy   User?     @relation("OrderRejectedBy", fields: [rejectedById], references: [id])
+  rejectReason String?
+  reviewedAt   DateTime?
 
   subtotal Decimal @default(0) @db.Decimal(12, 2)
   taxTotal Decimal @default(0) @db.Decimal(12, 2)

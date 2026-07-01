@@ -144,7 +144,9 @@ export default function OrdersPage() {
                           </p>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium">{o.retailer?.shopName ?? '—'}</p>
+                          <p className="flex items-center gap-1.5 font-medium">
+                            {o.orderType === 'SELF' ? '(Self-Order)' : (o.retailer?.shopName ?? '—')}
+                          </p>
                           <p className="text-xs text-muted-foreground tabular-nums">
                             {o.retailer?.user?.phone ?? '—'}
                           </p>

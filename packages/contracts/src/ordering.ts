@@ -20,9 +20,14 @@ export const orderItemInputSchema = z.object({
 });
 export type OrderItemInput = z.infer<typeof orderItemInputSchema>;
 
+export const OrderType = z.enum(['RETAILER', 'SELF']);
+export type OrderType = z.infer<typeof OrderType>;
+
 export const createOrderSchema = z.object({
   orderWindowId: cuid,
   items: z.array(orderItemInputSchema).min(1, 'Order needs at least one item'),
+  // Distributors may tag an order as a self-order for hawkers (spec §2.5).
+  orderType: OrderType.default('RETAILER'),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 

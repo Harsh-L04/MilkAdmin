@@ -126,6 +126,7 @@ export default function OrderDetailPage() {
         } · placed ${formatDateTime(order.createdAt)}`}
         actions={
           <div className="flex items-center gap-2">
+            {order.orderType === 'SELF' ? <Badge variant="info">Self-Order</Badge> : null}
             <OrderStatusBadge status={order.status} />
             {canReview && (
               <>
@@ -162,6 +163,22 @@ export default function OrderDetailPage() {
         />
         <SummaryStat icon={Receipt} label="Total" value={formatMoney(order.total)} />
       </section>
+
+      {order.status === 'APPROVED' && order.approvedBy?.name ? (
+        <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
+          Approved by <span className="font-medium">{order.approvedBy.name}</span>
+          {order.reviewedAt ? ` · ${formatDateTime(order.reviewedAt)}` : ''}
+        </div>
+      ) : null}
+      {order.status === 'REJECTED' ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
+          Rejected{order.rejectedBy?.name ? <> by <span className="font-medium">{order.rejectedBy.name}</span></> : null}
+          {order.reviewedAt ? ` · ${formatDateTime(order.reviewedAt)}` : ''}
+          {order.rejectReason ? (
+            <div className="mt-1 text-muted-foreground">Reason: {order.rejectReason}</div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">

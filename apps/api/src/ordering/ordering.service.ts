@@ -149,6 +149,8 @@ export class OrderingService {
         deliveryDate: window.deliveryDate,
         status: 'DRAFT',
         source: 'MANUAL',
+        // A distributor may tag the order as a self-order (spec §2.5-2.7).
+        orderType: user.role === 'DISTRIBUTOR' ? input.orderType : 'RETAILER',
         subtotal,
         taxTotal,
         total: subtotal.add(taxTotal),
@@ -218,6 +220,62 @@ export class OrderingService {
       },
     });
     return { id: order.id, total: order.total };
+  }
+
+  /**
+   * Create an order from explicit lines into a specific window, with the given
+   * source. Reuses retail pricing. Used by the standing-order generator (and
+   * any other server-side materializer) — bypasses actor resolution because the
+   * retailer/distributor/window are already known and authorized by the caller.
+   */
+  async createOrderFromLines(params: {
+    retailerId: string;
+    distributorId: string;
+    window: { id: string; deliveryDate: Date };
+    items: { productId: string; qty: Decimal | string }[];
+    source: 'STANDING' | 'MANUAL';
+  }) {
+    const { retailerId, distributorId, window, items, source } = params;
+    if (items.length === 0) {
+      throw new BadRequestException('Cannot create an order with no items');
+    }
+
+    const productIds = items.map((i) => i.productId);
+    if (new Set(productIds).size !== productIds.length) {
+      throw new BadRequestException('Duplicate products in order');
+    }
+    const prices = await this.retailPriceMap(productIds);
+
+    let subtotal = new Decimal(0);
+    let taxTotal = new Decimal(0);
+    const itemRows = items.map((i) => {
+      const priced = prices.get(i.productId);
+      if (!priced) {
+        throw new BadRequestException(`No price for product ${i.productId}`);
+      }
+      const qty = new Decimal(i.qty);
+      const lineNet = priced.price.mul(qty);
+      const lineTax = lineNet.mul(priced.taxRate).div(100);
+      subtotal = subtotal.add(lineNet);
+      taxTotal = taxTotal.add(lineTax);
+      return { productId: i.productId, unitPrice: priced.price, qtyOrdered: qty };
+    });
+
+    return this.prisma.order.create({
+      data: {
+        retailerId,
+        distributorId,
+        orderWindowId: window.id,
+        deliveryDate: window.deliveryDate,
+        status: 'DRAFT',
+        source,
+        subtotal,
+        taxTotal,
+        total: subtotal.add(taxTotal),
+        items: { create: itemRows },
+      },
+      include: { items: true },
+    });
   }
 
   // -- current window --------------------------------------------------------
@@ -349,6 +407,9 @@ export class OrderingService {
           status: target,
           approvalType: input.decision === 'APPROVE' ? 'MANUAL' : undefined,
           approvedById: input.decision === 'APPROVE' ? user.userId : undefined,
+          rejectedById: input.decision === 'REJECT' ? user.userId : undefined,
+          rejectReason: input.decision === 'REJECT' ? input.reason ?? null : undefined,
+          reviewedAt: new Date(),
         },
       });
       if (input.decision === 'APPROVE') {
@@ -372,7 +433,11 @@ export class OrderingService {
       );
       return tx.order.findUniqueOrThrow({
         where: { id: order.id },
-        include: { items: true },
+        include: {
+          items: true,
+          approvedBy: { select: { name: true } },
+          rejectedBy: { select: { name: true } },
+        },
       });
     });
   }
@@ -461,6 +526,8 @@ export class OrderingService {
         retailer: {
           select: { shopName: true, user: { select: { name: true, phone: true } } },
         },
+        approvedBy: { select: { name: true } },
+        rejectedBy: { select: { name: true } },
       },
     });
   }
@@ -475,6 +542,8 @@ export class OrderingService {
         retailer: {
           select: { shopName: true, user: { select: { name: true, phone: true } } },
         },
+        approvedBy: { select: { name: true } },
+        rejectedBy: { select: { name: true } },
       },
     });
     if (!order) throw new NotFoundException('Order not found');
