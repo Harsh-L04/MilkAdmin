@@ -12,6 +12,11 @@ import type {
   RecordCollectionInput,
   CustomerDto,
   UpdateCustomerInput,
+  OnboardedUserRow,
+  OnboardDistributorInput,
+  OnboardRetailerInput,
+  OnboardStaffInput,
+  UpdateOnboardingInput,
 } from '@moderns-milk/contracts';
 import { clearTokens, getTokens, setTokens } from './tokens';
 
@@ -215,6 +220,26 @@ export const api = {
   retailers: {
     update: (id: string, input: UpdateCustomerInput) =>
       request<CustomerDto>(`/customers/${id}`, { method: 'PATCH', body: input }),
+  },
+  onboarding: {
+    listDistributors: (search?: string, signal?: AbortSignal) =>
+      request<OnboardedUserRow[]>(`/onboarding/distributors${buildQuery({ search })}`, { signal }),
+    listRetailers: (search?: string, signal?: AbortSignal) =>
+      request<OnboardedUserRow[]>(`/onboarding/retailers${buildQuery({ search })}`, { signal }),
+    listSalesHeads: (search?: string, signal?: AbortSignal) =>
+      request<OnboardedUserRow[]>(`/onboarding/sales-heads${buildQuery({ search })}`, { signal }),
+    listSalesOfficers: (search?: string, signal?: AbortSignal) =>
+      request<OnboardedUserRow[]>(`/onboarding/sales-officers${buildQuery({ search })}`, { signal }),
+    onboardDistributor: (input: OnboardDistributorInput) =>
+      request<{ id: string }>('/onboarding/distributors', { method: 'POST', body: input }),
+    onboardRetailer: (input: OnboardRetailerInput) =>
+      request<{ id: string }>('/onboarding/retailers', { method: 'POST', body: input }),
+    onboardStaff: (input: OnboardStaffInput) =>
+      request<{ id: string }>('/onboarding/staff', { method: 'POST', body: input }),
+    updateDistributorStatus: (id: string, input: UpdateOnboardingInput) =>
+      request<unknown>(`/onboarding/distributors/${id}/status`, { method: 'PATCH', body: input }),
+    updateRetailerStatus: (id: string, input: UpdateOnboardingInput) =>
+      request<unknown>(`/onboarding/retailers/${id}/status`, { method: 'PATCH', body: input }),
   },
   salesVisits: {
     list: (signal?: AbortSignal) =>

@@ -38,6 +38,18 @@ enum UserStatus {
   PENDING
 }
 
+// Onboarding lifecycle for distributors / retailers (spec §2.8).
+// PENDING: details captured, not yet onboarded.
+// PROSPECTIVE: samples taken, under evaluation.
+// ONBOARDED: active on the platform.
+// REJECTED: declined — rejection note is mandatory.
+enum OnboardingStatus {
+  PENDING
+  PROSPECTIVE
+  ONBOARDED
+  REJECTED
+}
+
 enum ProductCategory {
   MILK
   DAIRY
@@ -98,28 +110,39 @@ enum ReturnReason {
 // ---------------------------------------------------------------------------
 
 model User {
-  id        String     @id @default(cuid())
-  phone     String     @unique
-  name      String
-  email     String?    @unique
-  role      Role
-  status    UserStatus @default(ACTIVE)
+  id     String     @id @default(cuid())
+  phone  String     @unique
+  name   String
+  email  String?    @unique
+  role   Role
+  status UserStatus @default(ACTIVE)
 
   // Staff (SALES_OFFICER / DISTRIBUTOR) may be scoped to a distributor.
   // Used by the tenant-scope guard so a user can never read another org's data.
   distributorId String?
   distributor   Distributor? @relation("DistributorStaff", fields: [distributorId], references: [id])
 
-  retailer  Retailer?
-  registeredRetailers Retailer[] @relation("RetailerSalesOfficer")
+  // Onboarding attributes captured for staff (SALES_HEAD / SALES_OFFICER).
+  area    String?
+  subArea String?
+
+  // A SALES_OFFICER reports to a SALES_HEAD. Self-relation kept nullable so
+  // heads and admins have no manager.
+  reportsToId String?
+  reportsTo   User?   @relation("StaffReporting", fields: [reportsToId], references: [id])
+  reports     User[]  @relation("StaffReporting")
+
+  retailer            Retailer?
+  registeredRetailers Retailer[]   @relation("RetailerSalesOfficer")
   salesVisits         SalesVisit[] @relation("VisitSalesOfficer")
-  auditLogs AuditLog[]
+  auditLogs           AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([role])
   @@index([distributorId])
+  @@index([reportsToId])
 }
 
 model Distributor {
@@ -127,10 +150,19 @@ model Distributor {
   code    String     @unique
   name    String
   region  String?
+  subArea String?
   address String?
   status  UserStatus @default(ACTIVE)
 
-  staff       User[]       @relation("DistributorStaff")
+  // Onboarding details (spec §2.8.1). No verification in this phase.
+  pan             String?
+  bankDetails     String?
+  securityDeposit Decimal? @db.Decimal(12, 2)
+
+  onboardingStatus OnboardingStatus @default(PENDING)
+  onboardingNote   String? // mandatory when REJECTED (enforced in service)
+
+  staff       User[]        @relation("DistributorStaff")
   retailers   Retailer[]
   routes      Route[]
   orders      Order[]
@@ -176,6 +208,22 @@ model Retailer {
   lng          Float?
   status       UserStatus @default(ACTIVE)
 
+  // Onboarding details collected from the retailer (spec §2.8.2).
+  subArea           String?
+  pan               String?
+  shopLicenseNo     String?
+  licenseImageKey   String? // object-store key for the uploaded license image
+  securityDeposit   Decimal?  @db.Decimal(12, 2)
+  monthlyTurnover   Decimal?  @db.Decimal(14, 2)
+  shopEstablishedOn String? // "YYYY-MM" month & year of establishment
+  brandsDealing     String[] // brands the outlet currently deals in
+  productsSold      String[] // products currently sold
+  instrumentNo      String? // security-deposit instrument / cheque no.
+  instrumentDate    DateTime?
+
+  onboardingStatus OnboardingStatus @default(PENDING)
+  onboardingNote   String? // mandatory when REJECTED (enforced in service)
+
   // Sales person who brought this outlet in — kept centrally so HQ retains
   // the relationship even if the distributor changes.
   salesOfficerId String?
@@ -209,17 +257,17 @@ model RetailerAccount {
 // ---------------------------------------------------------------------------
 
 model Product {
-  id              String          @id @default(cuid())
-  sku             String          @unique
-  name            String
-  category        ProductCategory
-  uom             Uom
-  packSize        Decimal         @db.Decimal(12, 3) // e.g. 0.500 L, 1.000 L
-  hsnCode         String?
-  taxRate         Decimal         @default(0) @db.Decimal(5, 2) // GST %
-  isReturnablePack Boolean        @default(false)
-  shelfLifeDays   Int?
-  active          Boolean         @default(true)
+  id               String          @id @default(cuid())
+  sku              String          @unique
+  name             String
+  category         ProductCategory
+  uom              Uom
+  packSize         Decimal         @db.Decimal(12, 3) // e.g. 0.500 L, 1.000 L
+  hsnCode          String?
+  taxRate          Decimal         @default(0) @db.Decimal(5, 2) // GST %
+  isReturnablePack Boolean         @default(false)
+  shelfLifeDays    Int?
+  active           Boolean         @default(true)
 
   priceItems         PriceListItem[]
   standingOrderItems StandingOrderItem[]
@@ -285,13 +333,13 @@ model OrderWindow {
 }
 
 model StandingOrder {
-  id         String   @id @default(cuid())
-  name       String?
-  retailerId String
-  retailer   Retailer @relation(fields: [retailerId], references: [id])
+  id          String   @id @default(cuid())
+  name        String?
+  retailerId  String
+  retailer    Retailer @relation(fields: [retailerId], references: [id])
   // 7-bit weekday mask, Monday = bit 0. 127 = every day.
-  weekdayMask Int     @default(127)
-  active      Boolean @default(true)
+  weekdayMask Int      @default(127)
+  active      Boolean  @default(true)
 
   items StandingOrderItem[]
 

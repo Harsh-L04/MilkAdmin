@@ -5,6 +5,7 @@ import {
   Building2,
   Store,
   Route as RouteIcon,
+  UsersRound,
   type LucideIcon,
 } from 'lucide-react';
 import type { Role } from '@moderns-milk/contracts';
@@ -42,6 +43,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     heading: 'Network',
     items: [
+      {
+        label: 'User management',
+        href: '/users',
+        icon: UsersRound,
+        roles: ['ADMIN', 'SALES_HEAD'],
+      },
       {
         label: 'Distributors',
         href: '/distributors',
