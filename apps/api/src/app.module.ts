@@ -17,6 +17,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { SampleOrderModule } from './sample-order/sample-order.module';
 import { PaymentModule } from './payment/payment.module';
 import { ReportModule } from './report/report.module';
+import { SettingsModule } from './settings/settings.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -38,6 +39,7 @@ import { HealthController } from './health.controller';
     SampleOrderModule,
     PaymentModule,
     ReportModule,
+    SettingsModule,
   ],
   controllers: [HealthController],
   providers: [

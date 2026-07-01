@@ -9,6 +9,7 @@ import {
   Gift,
   Wallet,
   FileSpreadsheet,
+  Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react';
 import type { Role } from '@moderns-milk/contracts';
@@ -78,6 +79,10 @@ export const NAV_SECTIONS: NavSection[] = [
         roles: ['ADMIN', 'SALES_HEAD'],
       },
     ],
+  },
+  {
+    heading: 'System',
+    items: [{ label: 'Settings', href: '/settings', icon: SettingsIcon }],
   },
 ];
 

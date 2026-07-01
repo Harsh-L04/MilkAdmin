@@ -23,6 +23,8 @@ import type {
   CreatePaymentInput,
   UpdatePaymentStatusInput,
   OrderSummaryDto,
+  OrderDeadlineDto,
+  OrderDeadlineInput,
 } from '@moderns-milk/contracts';
 import { clearTokens, getTokens, setTokens } from './tokens';
 
@@ -268,6 +270,12 @@ export const api = {
   reports: {
     orderSummary: (date: string | undefined, signal?: AbortSignal) =>
       request<OrderSummaryDto>(`/reports/order-summary${buildQuery({ date })}`, { signal }),
+  },
+  settings: {
+    getOrderDeadline: (signal?: AbortSignal) =>
+      request<OrderDeadlineDto>('/settings/order-deadline', { signal }),
+    setOrderDeadline: (input: OrderDeadlineInput) =>
+      request<OrderDeadlineDto>('/settings/order-deadline', { method: 'PUT', body: input }),
   },
   ledger: {
     get: (retailerId: string, signal?: AbortSignal) =>

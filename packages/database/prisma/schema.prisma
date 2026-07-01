@@ -263,6 +263,14 @@ model RetailerAccount {
   updatedAt DateTime @updatedAt
 }
 
+// Generic key/value for admin-managed global settings (spec §8) — e.g. the
+// order placement deadline. Kept simple so new toggles slot in without a migration.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 // ---------------------------------------------------------------------------
 // Catalog & pricing
 // ---------------------------------------------------------------------------

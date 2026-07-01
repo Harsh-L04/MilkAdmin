@@ -7,5 +7,6 @@ export * from './onboarding';
 export * from './sample-order';
 export * from './payment';
 export * from './report';
+export * from './settings';
 export * from './sales-visit';
 export * from './ledger';
