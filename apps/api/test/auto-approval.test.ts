@@ -36,6 +36,11 @@ describe('exception-based auto approval', () => {
     expect(d).toMatchObject({ reasons: ['NEW_RETAILER'] });
   });
 
+  it('routes new SKU to manual review', () => {
+    const d = evaluateApproval({ ...base, hasNewSku: true });
+    expect(d).toMatchObject({ reasons: ['NEW_SKU'] });
+  });
+
   it('blocks orders that would exceed the credit limit', () => {
     const d = evaluateApproval({
       ...base,
@@ -67,9 +72,58 @@ describe('exception-based auto approval', () => {
   });
 
   it('skips the volume check when there is no standing baseline', () => {
-    // No baseline => a large order does NOT trip VOLUME_SPIKE (still within credit).
     expect(
       evaluateApproval({ ...base, standingTotal: null, orderTotal: 15000 }),
     ).toEqual({ type: 'AUTO_APPROVE' });
+  });
+
+  it('routes manual review when creditLimit is 0 and balance is positive', () => {
+    const d = evaluateApproval({
+      ...base,
+      creditLimit: 0,
+      accountBalance: 0,
+      orderTotal: 1,
+    });
+    expect(d.type).toBe('MANUAL_REVIEW');
+    expect(d).toMatchObject({ reasons: ['OVER_CREDIT_LIMIT'] });
+  });
+
+  it('handles negative account balance (already over limit)', () => {
+    const d = evaluateApproval({
+      ...base,
+      accountBalance: -5000,
+      creditLimit: -5001,
+      orderTotal: 0,
+    });
+    expect(d.type).toBe('MANUAL_REVIEW');
+    expect(d).toMatchObject({ reasons: ['OVER_CREDIT_LIMIT'] });
+  });
+
+  it('handles zero values for orderTotal and standingTotal', () => {
+    const d = evaluateApproval({
+      ...base,
+      orderTotal: 0,
+      standingTotal: 0,
+    });
+    expect(d.type).toBe('AUTO_APPROVE');
+  });
+
+  it('uses strict greater-than for credit limit check (not >=)', () => {
+    const d = evaluateApproval({
+      ...base,
+      standingTotal: null,
+      orderTotal: 1999,
+      accountBalance: 18000,
+    });
+    expect(d.type).toBe('AUTO_APPROVE');
+  });
+
+  it('stays within credit limit when balance+total is below limit', () => {
+    const d = evaluateApproval({
+      ...base,
+      accountBalance: 18000,
+      orderTotal: 1000,
+    });
+    expect(d.type).toBe('AUTO_APPROVE');
   });
 });

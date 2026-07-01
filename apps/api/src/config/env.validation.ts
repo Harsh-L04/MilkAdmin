@@ -21,6 +21,16 @@ const envSchema = z.object({
   // Global rate limit: max requests per client per window (seconds), per route.
   THROTTLE_LIMIT: z.coerce.number().int().default(120),
   THROTTLE_TTL: z.coerce.number().int().default(60),
+  MINIO_ENDPOINT: z.string().default('localhost'),
+  MINIO_PORT: z.coerce.number().int().default(9000),
+  MINIO_USE_SSL: z
+    .string()
+    .default('false')
+    .transform((v) => v === 'true' || v === '1'),
+  MINIO_ACCESS_KEY: z.string().min(1).default('minioadmin'),
+  MINIO_SECRET_KEY: z.string().min(1).default('minioadmin_dev'),
+  MINIO_BUCKET: z.string().default('moderns-milk'),
+  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(20).default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;

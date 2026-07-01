@@ -10,3 +10,4 @@ export * from './report';
 export * from './settings';
 export * from './sales-visit';
 export * from './ledger';
+export * from './file';

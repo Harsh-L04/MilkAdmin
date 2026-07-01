@@ -16,9 +16,13 @@ import {
   VerifyOtpInput,
   RefreshInput,
   AuthTokens,
+  LoginInput,
+  ChangePasswordInput,
   requestOtpSchema,
   verifyOtpSchema,
   refreshSchema,
+  loginSchema,
+  changePasswordSchema,
 } from '@moderns-milk/contracts';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { Public } from '../common/auth/jwt-auth.guard';
@@ -48,7 +52,6 @@ export class AuthController {
   @UsePipes(new ZodValidationPipe(requestOtpSchema))
   async requestOtp(@Body() body: RequestOtpInput, @Ip() ip: string) {
     await this.auth.requestOtp(body.phone, ip);
-    // Always 200 with a neutral message (no user enumeration).
     return { message: 'If the number is registered, a code has been sent.' };
   }
 
@@ -68,6 +71,24 @@ export class AuthController {
 
   @Public()
   @Throttle({ limit: 30, ttlSec: 60 })
+  @Post('login')
+  @HttpCode(200)
+  async login(
+    @Body(new ZodValidationPipe(loginSchema)) body: LoginInput,
+  ) {
+    return this.auth.login(body.phone, body.password);
+  }
+
+  @Post('change-password')
+  @HttpCode(204)
+  async changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(changePasswordSchema)) body: ChangePasswordInput,
+  ) {
+    await this.auth.changePassword(user.userId, body.oldPassword, body.newPassword);
+  }
+
+  @Public()
   @Post('refresh')
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(refreshSchema))

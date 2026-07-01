@@ -20,6 +20,21 @@ export const refreshSchema = z.object({
 });
 export type RefreshInput = z.infer<typeof refreshSchema>;
 
+export const loginSchema = z.object({
+  phone: phoneSchema,
+  password: z.string().min(1, 'Password is required').max(100),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
+
+export const changePasswordSchema = z.object({
+  oldPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z
+    .string()
+    .min(6, 'New password must be at least 6 characters')
+    .max(100),
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 export const authTokensSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
@@ -30,6 +45,11 @@ export type AuthTokens = z.infer<typeof authTokensSchema>;
 export interface JwtPayload {
   sub: string; // user id
   role: Role;
-  distributorId?: string; // scoping for staff/retailer
+  distributorId?: string;
   retailerId?: string;
+}
+
+export interface FileUploadResult {
+  key: string;
+  url: string;
 }

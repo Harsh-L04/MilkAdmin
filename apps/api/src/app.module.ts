@@ -20,6 +20,7 @@ import { SampleOrderModule } from './sample-order/sample-order.module';
 import { PaymentModule } from './payment/payment.module';
 import { ReportModule } from './report/report.module';
 import { SettingsModule } from './settings/settings.module';
+import { FileModule } from './file/file.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -27,6 +28,7 @@ import { HealthController } from './health.controller';
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
+      envFilePath: ['.env', '../../.env'],
     }),
     CommonModule,
     AuthModule,
@@ -42,15 +44,13 @@ import { HealthController } from './health.controller';
     PaymentModule,
     ReportModule,
     SettingsModule,
+    FileModule,
   ],
   controllers: [HealthController],
   providers: [
-    // Rate limit first (covers unauthenticated brute force), then auth
-    // (populates request.user), then role checks.
     { provide: APP_GUARD, useClass: ThrottleGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
-    // Opt-in per route via @Idempotent(); no-ops elsewhere.
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
   ],
 })
