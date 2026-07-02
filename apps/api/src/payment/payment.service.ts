@@ -94,13 +94,18 @@ export class PaymentService {
 
   async list(
     user: AuthenticatedUser,
-    filters: { status?: string; distributorId?: string },
+    filters: { status?: string; distributorId?: string; dateFrom?: string; dateTo?: string },
   ): Promise<PaymentLogDto[]> {
     const where: Prisma.PaymentLogWhereInput = await this.scope(user);
     if (filters.status === 'PAID' || filters.status === 'PENDING') {
       where.status = filters.status;
     }
     if (filters.distributorId) where.distributorId = filters.distributorId;
+    if (filters.dateFrom || filters.dateTo) {
+      where.paymentDate = {};
+      if (filters.dateFrom) where.paymentDate.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.paymentDate.lte = new Date(filters.dateTo);
+    }
 
     const rows = await this.prisma.paymentLog.findMany({
       where,

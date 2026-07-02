@@ -50,6 +50,9 @@ export default function RetailersPage() {
   const { data, isLoading, isError, error, refetch } = useRetailers();
   const [search, setSearch] = React.useState('');
   const [distributor, setDistributor] = React.useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = React.useState('ALL');
+  const [dateFrom, setDateFrom] = React.useState('');
+  const [dateTo, setDateTo] = React.useState('');
   const [editing, setEditing] = React.useState<RetailerRow | null>(null);
   const [formOpen, setFormOpen] = React.useState(false);
   const [toggling, setToggling] = React.useState<RetailerRow | null>(null);
@@ -66,15 +69,24 @@ export default function RetailersPage() {
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
+    const fromDate = dateFrom ? new Date(dateFrom) : null;
+    const toDate = dateTo ? new Date(dateTo) : null;
     return (data ?? []).filter((r) => {
       if (distributor !== 'ALL' && r.distributor !== distributor) return false;
+      if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
+      if (fromDate && new Date(r.createdAt) < fromDate) return false;
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setDate(end.getDate() + 1);
+        if (new Date(r.createdAt) > end) return false;
+      }
       if (!q) return true;
       return [r.outletName, r.phone ?? '', r.route ?? '', r.gstin ?? '']
         .join(' ')
         .toLowerCase()
         .includes(q);
     });
-  }, [data, search, distributor]);
+  }, [data, search, distributor, statusFilter, dateFrom, dateTo]);
 
   return (
     <div className="space-y-6">
@@ -91,28 +103,42 @@ export default function RetailersPage() {
       />
 
       <Card>
-        <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <SearchInput
             value={search}
             onValueChange={setSearch}
             placeholder="Search by outlet, phone, route or GST…"
             containerClassName="sm:max-w-xs"
           />
-          <div className="sm:ml-auto">
-            <Select value={distributor} onValueChange={setDistributor}>
-              <SelectTrigger className="w-full sm:w-[220px]" aria-label="Filter by distributor">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All distributors</SelectItem>
-                {distributors.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={distributor} onValueChange={setDistributor}>
+            <SelectTrigger className="w-[180px]" aria-label="Filter by distributor"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All distributors</SelectItem>
+              {distributors.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All status</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="INACTIVE">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="From date"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="To date"
+          />
         </div>
         <CardContent className="p-0">
           {isLoading ? (

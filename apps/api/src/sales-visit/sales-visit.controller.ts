@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import {
   CreateSalesVisitInput,
   createSalesVisitSchema,
@@ -28,7 +28,12 @@ export class SalesVisitController {
 
   @Get()
   @Roles(...VISIT_ROLES)
-  list(@CurrentUser() user: AuthenticatedUser) {
-    return this.visits.list(user);
+  list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('outletType') outletType?: string,
+  ) {
+    return this.visits.list(user, { dateFrom, dateTo, outletType });
   }
 }

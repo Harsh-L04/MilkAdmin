@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   OnboardDistributorInput,
   OnboardRetailerInput,
@@ -12,17 +13,31 @@ import {
   OnboardedUserRow,
 } from '@moderns-milk/contracts';
 import { Prisma } from '@moderns-milk/database';
+import * as bcrypt from 'bcryptjs';
+import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../common/auth/current-user.decorator';
 
-/**
- * User onboarding for HQ roles (spec §2.8–2.9). Admin / Sales Head / Sales
- * Officer capture new distributors, retailers and staff with the full detail
- * set and the PENDING → PROSPECTIVE → ONBOARDED / REJECTED lifecycle.
- */
 @Injectable()
 export class OnboardingService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly bcryptRounds: number;
+  private readonly defaultPassword: string;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    config: ConfigService,
+  ) {
+    this.bcryptRounds = config.get<number>('BCRYPT_ROUNDS', 10);
+    this.defaultPassword = 'Moderns@2026'; // temp default; changed on first login
+  }
+
+  private generatePassword(): string {
+    return randomBytes(4).toString('hex').toUpperCase();
+  }
+
+  private async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, this.bcryptRounds);
+  }
 
   private async assertPhoneFree(phone: string, tx?: Prisma.TransactionClient) {
     const client = tx ?? this.prisma;
@@ -30,16 +45,14 @@ export class OnboardingService {
     if (clash) throw new ConflictException('A user with this phone already exists');
   }
 
-  /** Distributor code from the name, made unique with a short suffix. */
   private codeFor(name: string): string {
     const slug = name.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase() || 'DIST';
     return `${slug}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   }
 
-  // -- onboard distributor ---------------------------------------------------
-
   async onboardDistributor(input: OnboardDistributorInput) {
     await this.assertPhoneFree(input.phone);
+    const password = await this.hashPassword(this.defaultPassword);
 
     return this.prisma.$transaction(async (tx) => {
       const distributor = await tx.distributor.create({
@@ -59,7 +72,6 @@ export class OnboardingService {
         },
       });
 
-      // The distributor's login/contact user.
       const user = await tx.user.create({
         data: {
           phone: input.phone,
@@ -68,14 +80,13 @@ export class OnboardingService {
           role: 'DISTRIBUTOR',
           status: input.status,
           distributorId: distributor.id,
+          passwordHash: password,
         },
       });
 
       return { id: distributor.id, userId: user.id, code: distributor.code };
     });
   }
-
-  // -- onboard retailer ------------------------------------------------------
 
   async onboardRetailer(input: OnboardRetailerInput) {
     await this.assertPhoneFree(input.phone);
@@ -85,6 +96,8 @@ export class OnboardingService {
     });
     if (!distributor) throw new NotFoundException('Distributor not found');
 
+    const password = await this.hashPassword(this.defaultPassword);
+
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -93,6 +106,7 @@ export class OnboardingService {
           name: input.fullName,
           role: 'RETAILER',
           status: input.status,
+          passwordHash: password,
         },
       });
 
@@ -128,8 +142,6 @@ export class OnboardingService {
     });
   }
 
-  // -- onboard staff (SALES_HEAD / SALES_OFFICER) ----------------------------
-
   async onboardStaff(input: OnboardStaffInput) {
     await this.assertPhoneFree(input.phone);
 
@@ -142,6 +154,8 @@ export class OnboardingService {
       }
     }
 
+    const password = await this.hashPassword(this.defaultPassword);
+
     const user = await this.prisma.user.create({
       data: {
         phone: input.phone,
@@ -152,15 +166,12 @@ export class OnboardingService {
         area: input.area ?? null,
         subArea: input.subArea ?? null,
         reportsToId: input.role === 'SALES_OFFICER' ? input.reportsToId ?? null : null,
+        passwordHash: password,
       },
     });
     return { id: user.id };
   }
 
-  // -- listing ---------------------------------------------------------------
-
-  // Role-scoped WHERE fragments. ADMIN sees everything; a SALES_HEAD sees their
-  // officers' network; a SALES_OFFICER sees only what they manage (spec §2, SH/SO).
   private distributorScope(user: AuthenticatedUser): Prisma.DistributorWhereInput {
     if (user.role === 'SALES_OFFICER') return { assignedSalesOfficerId: user.userId };
     if (user.role === 'SALES_HEAD')
@@ -175,7 +186,6 @@ export class OnboardingService {
     return {};
   }
 
-  /** Distributors with onboarding detail (spec §2.2). */
   async listDistributors(
     user: AuthenticatedUser,
     search?: string,
@@ -209,7 +219,6 @@ export class OnboardingService {
     }));
   }
 
-  /** Retailers with onboarding detail (spec §2.3). */
   async listRetailers(
     user: AuthenticatedUser,
     search?: string,
@@ -246,13 +255,11 @@ export class OnboardingService {
     }));
   }
 
-  /** Staff of a given role (spec §2.4 / §2.5). */
   async listStaff(
     role: 'SALES_HEAD' | 'SALES_OFFICER',
     user: AuthenticatedUser,
     search?: string,
   ): Promise<OnboardedUserRow[]> {
-    // A SALES_HEAD only sees the officers reporting to them.
     const scope: Prisma.UserWhereInput =
       role === 'SALES_OFFICER' && user.role === 'SALES_HEAD'
         ? { reportsToId: user.userId }
@@ -297,8 +304,6 @@ export class OnboardingService {
       };
     });
   }
-
-  // -- status transitions ----------------------------------------------------
 
   async updateDistributorOnboarding(id: string, input: UpdateOnboardingInput) {
     const exists = await this.prisma.distributor.findUnique({ where: { id } });

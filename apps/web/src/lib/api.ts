@@ -25,6 +25,8 @@ import type {
   OrderSummaryDto,
   OrderDeadlineDto,
   OrderDeadlineInput,
+  StandingOrderDto,
+  UpsertStandingOrderInput,
 } from '@moderns-milk/contracts';
 import { clearTokens, getTokens, setTokens } from './tokens';
 
@@ -60,16 +62,18 @@ function messageFromBody(body: unknown, fallback: string): string {
 
 async function rawRequest<T>(path: string, opts: RequestOptions): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  const isFormData = opts.body instanceof FormData;
+  if (opts.body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
   if (opts.auth !== false) {
     const tokens = getTokens();
     if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`;
   }
 
+  const body = isFormData ? (opts.body as FormData) : opts.body !== undefined ? JSON.stringify(opts.body) : undefined;
   const res = await fetch(`${BASE}${path}`, {
     method: opts.method ?? 'GET',
     headers,
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body,
     signal: opts.signal,
   });
 
@@ -231,6 +235,37 @@ export const api = {
       request<DistributorRow[]>('/admin/distributors', { signal }),
     retailers: (signal?: AbortSignal) =>
       request<RetailerRow[]>('/admin/retailers', { signal }),
+    forceLogout: (userId: string) =>
+      request<{ message: string }>(`/admin/users/${userId}/force-logout`, { method: 'POST' }),
+    unlinkedUsers: (signal?: AbortSignal) =>
+      request<UnlinkedUserRow[]>('/admin/users/unlinked', { signal }),
+    linkUser: (userId: string, distributorId: string) =>
+      request<{ message: string }>(`/admin/users/${userId}/link`, {
+        method: 'POST',
+        body: { distributorId },
+      }),
+    updateDistributor: (id: string, body: { name?: string; code?: string; region?: string; address?: string; status?: string }) =>
+      request<{ message: string }>(`/admin/distributors/${id}`, {
+        method: 'PATCH',
+        body,
+      }),
+  },
+  files: {
+    upload: (file: File, signal?: AbortSignal) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request<{ key: string; url: string; originalName: string; mimeType: string; size: number }>(
+        '/files/upload',
+        { method: 'POST', body: formData, signal },
+      );
+    },
+    presignedUpload: (originalName: string) =>
+      request<{ key: string; url: string }>('/files/presigned-upload', {
+        method: 'POST',
+        body: { originalName },
+      }),
+    getUrl: (key: string) =>
+      request<string>(`/files/${key}`, {}),
   },
   retailers: {
     update: (id: string, input: UpdateCustomerInput) =>
@@ -257,8 +292,8 @@ export const api = {
       request<unknown>(`/onboarding/retailers/${id}/status`, { method: 'PATCH', body: input }),
   },
   salesVisits: {
-    list: (signal?: AbortSignal) =>
-      request<SalesVisitRow[]>('/sales-visits', { signal }),
+    list: (filters: { dateFrom?: string; dateTo?: string; outletType?: string } = {}, signal?: AbortSignal) =>
+      request<SalesVisitRow[]>(`/sales-visits${buildQuery(filters)}`, { signal }),
   },
   sampleOrders: {
     list: (filters: { search?: string; date?: string } = {}, signal?: AbortSignal) =>
@@ -267,7 +302,7 @@ export const api = {
       request<SampleOrderDto>('/sample-orders', { method: 'POST', body: input }),
   },
   payments: {
-    list: (filters: { status?: string; distributorId?: string } = {}, signal?: AbortSignal) =>
+    list: (filters: { status?: string; distributorId?: string; dateFrom?: string; dateTo?: string } = {}, signal?: AbortSignal) =>
       request<PaymentLogDto[]>(`/payments${buildQuery(filters)}`, { signal }),
     create: (input: CreatePaymentInput) =>
       request<PaymentLogDto>('/payments', { method: 'POST', body: input }),
@@ -289,6 +324,16 @@ export const api = {
       request<OutletLedgerDto>(`/customers/${retailerId}/ledger`, { signal }),
     collect: (input: RecordCollectionInput) =>
       request<OutletLedgerDto>('/collections', { method: 'POST', body: input }),
+  },
+  standingOrders: {
+    list: (signal?: AbortSignal) =>
+      request<StandingOrderDto[]>('/standing-orders', { signal }),
+    create: (input: UpsertStandingOrderInput) =>
+      request<StandingOrderDto>('/standing-orders', { method: 'POST', body: input }),
+    update: (id: string, input: UpsertStandingOrderInput) =>
+      request<StandingOrderDto>(`/standing-orders/${id}`, { method: 'PATCH', body: input }),
+    delete: (id: string) =>
+      request<void>(`/standing-orders/${id}`, { method: 'DELETE' }),
   },
 };
 
@@ -349,5 +394,14 @@ export interface RetailerRow {
   balance: string;
   creditLimit: string;
   status: string;
+  createdAt: string;
+}
+
+export interface UnlinkedUserRow {
+  id: string;
+  name: string;
+  phone: string;
+  role: 'SALES_OFFICER' | 'DISTRIBUTOR';
+  area: string | null;
   createdAt: string;
 }

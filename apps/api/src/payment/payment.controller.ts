@@ -27,8 +27,10 @@ export class PaymentController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('status') status?: string,
     @Query('distributorId') distributorId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
-    return this.payments.list(user, { status, distributorId });
+    return this.payments.list(user, { status, distributorId, dateFrom, dateTo });
   }
 
   @Post()

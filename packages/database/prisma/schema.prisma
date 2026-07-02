@@ -124,12 +124,13 @@ enum ReturnReason {
 // ---------------------------------------------------------------------------
 
 model User {
-  id     String     @id @default(cuid())
-  phone  String     @unique
-  name   String
-  email  String?    @unique
-  role   Role
-  status UserStatus @default(ACTIVE)
+  id           String     @id @default(cuid())
+  phone        String     @unique
+  name         String
+  email        String?    @unique
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  passwordHash String? // bcrypt hash for password auth (Epic 1)
 
   // Staff (SALES_OFFICER / DISTRIBUTOR) may be scoped to a distributor.
   // Used by the tenant-scope guard so a user can never read another org's data.

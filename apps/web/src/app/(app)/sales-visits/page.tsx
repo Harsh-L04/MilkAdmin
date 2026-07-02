@@ -8,6 +8,13 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { SearchInput } from '@/components/ui/search-input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -20,8 +27,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
 export default function SalesVisitsPage() {
-  const { data, isLoading, isError, error, refetch } = useSalesVisits();
   const [search, setSearch] = React.useState('');
+  const [outletType, setOutletType] = React.useState('ALL');
+  const [dateFrom, setDateFrom] = React.useState('');
+  const [dateTo, setDateTo] = React.useState('');
+
+  const apiFilters = React.useMemo(
+    () => ({
+      outletType: outletType !== 'ALL' ? outletType : undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+    }),
+    [outletType, dateFrom, dateTo],
+  );
+
+  const { data, isLoading, isError, error, refetch } = useSalesVisits(apiFilters);
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -50,12 +70,34 @@ export default function SalesVisitsPage() {
       />
 
       <Card>
-        <div className="border-b border-border p-4">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <SearchInput
             value={search}
             onValueChange={setSearch}
             placeholder="Search by outlet, rep, route…"
             containerClassName="sm:max-w-xs"
+          />
+          <Select value={outletType} onValueChange={setOutletType}>
+            <SelectTrigger className="w-[150px]" aria-label="Filter by outlet type"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All outlets</SelectItem>
+              <SelectItem value="EXISTING">Existing</SelectItem>
+              <SelectItem value="NEW">New</SelectItem>
+            </SelectContent>
+          </Select>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="From date"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="To date"
           />
         </div>
         <CardContent className="p-0">

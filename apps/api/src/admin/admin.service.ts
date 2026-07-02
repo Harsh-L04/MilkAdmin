@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@moderns-milk/database';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { TokenService } from '../auth/token.service';
 import { AuthenticatedUser } from '../common/auth/current-user.decorator';
 
 /**
@@ -9,7 +10,57 @@ import { AuthenticatedUser } from '../common/auth/current-user.decorator';
  */
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tokens: TokenService,
+  ) {}
+
+  async forceLogout(userId: string): Promise<{ message: string }> {
+    await this.tokens.revokeAll(userId);
+    return { message: 'User logged out successfully' };
+  }
+
+  async listUnlinkedUsers() {
+    const rows = await this.prisma.user.findMany({
+      where: {
+        role: { in: ['SALES_OFFICER', 'DISTRIBUTOR'] },
+        distributorId: null,
+      },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        area: true,
+        createdAt: true,
+      },
+    });
+    return rows;
+  }
+
+  async updateDistributor(id: string, body: { name?: string; code?: string; region?: string; address?: string; status?: string }) {
+    const data: Record<string, unknown> = {};
+    if (body.name !== undefined) data.name = body.name;
+    if (body.code !== undefined) data.code = body.code;
+    if (body.region !== undefined) data.region = body.region;
+    if (body.address !== undefined) data.address = body.address;
+    if (body.status !== undefined) data.status = body.status;
+    await this.prisma.distributor.update({ where: { id }, data });
+    return { message: 'Distributor updated' };
+  }
+
+  async linkUser(userId: string, distributorId: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    await this.prisma.distributor.findUniqueOrThrow({ where: { id: distributorId } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { distributorId },
+    });
+    // Revoke tokens so the next login picks up the new distributorId in the JWT.
+    await this.tokens.revokeAll(userId);
+    return { message: `User ${user.name} linked to distributor` };
+  }
 
   /** Aggregated KPIs for the dashboard. Scoped by distributor for staff. */
   async dashboard(user: AuthenticatedUser) {

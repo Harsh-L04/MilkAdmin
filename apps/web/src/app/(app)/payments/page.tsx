@@ -2,10 +2,12 @@
 
 import * as React from 'react';
 import { Plus, Wallet, Check } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import type { PaymentLogDto } from '@moderns-milk/contracts';
 import { usePayments, useUpdatePaymentStatus } from '@/features/payments/use-payments';
 import { PaymentDialog } from '@/features/payments/payment-dialog';
 import { useAuth } from '@/lib/auth-context';
+import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -46,9 +48,25 @@ export default function PaymentsPage() {
   const isAdmin = role === 'ADMIN';
 
   const [status, setStatus] = React.useState<'ALL' | 'PENDING' | 'PAID'>('ALL');
+  const [distributorId, setDistributorId] = React.useState('ALL');
+  const [dateFrom, setDateFrom] = React.useState('');
+  const [dateTo, setDateTo] = React.useState('');
   const [formOpen, setFormOpen] = React.useState(false);
 
-  const filters = React.useMemo(() => ({ status: status === 'ALL' ? undefined : status }), [status]);
+  const { data: distributors } = useQuery({
+    queryKey: ['admin', 'distributors'],
+    queryFn: ({ signal }) => api.admin.distributors(signal),
+  });
+
+  const filters = React.useMemo(
+    () => ({
+      status: status === 'ALL' ? undefined : status,
+      distributorId: distributorId !== 'ALL' ? distributorId : undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+    }),
+    [status, distributorId, dateFrom, dateTo],
+  );
   const { data, isLoading, isError, error } = usePayments(filters);
   const statusMut = useUpdatePaymentStatus();
   const rows = data ?? [];
@@ -76,15 +94,40 @@ export default function PaymentsPage() {
       />
 
       <Card>
-        <div className="flex items-center gap-3 border-b border-border p-4">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-            <SelectTrigger className="w-[150px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[140px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All status</SelectItem>
               <SelectItem value="PENDING">Pending</SelectItem>
               <SelectItem value="PAID">Paid</SelectItem>
             </SelectContent>
           </Select>
+
+          <Select value={distributorId} onValueChange={setDistributorId}>
+            <SelectTrigger className="w-[200px]" aria-label="Filter by distributor"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All distributors</SelectItem>
+              {(distributors ?? []).map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="From date"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="To date"
+          />
         </div>
 
         <CardContent className="p-0">

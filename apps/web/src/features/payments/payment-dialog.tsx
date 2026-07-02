@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { createPaymentSchema, type PaymentLogMode } from '@moderns-milk/contracts';
-import { ApiError } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useOnboardedUsers } from '@/features/onboarding/use-onboarding';
 import { useCreatePayment } from './use-payments';
@@ -51,6 +51,8 @@ export function PaymentDialog({ open, onClose }: Props) {
   const [paymentDate, setPaymentDate] = React.useState(today());
   const [mode, setMode] = React.useState<PaymentLogMode>('UPI');
   const [proofImageKey, setProofImageKey] = React.useState('');
+  const [proofPreview, setProofPreview] = React.useState('');
+  const [uploadingProof, setUploadingProof] = React.useState(false);
   const [note, setNote] = React.useState('');
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
@@ -61,10 +63,28 @@ export function PaymentDialog({ open, onClose }: Props) {
       setPaymentDate(today());
       setMode('UPI');
       setProofImageKey('');
+      setProofPreview('');
+      setUploadingProof(false);
       setNote('');
       setErrors({});
     }
   }, [open]);
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingProof(true);
+    try {
+      const result = await api.files.upload(file);
+      setProofImageKey(result.key);
+      setProofPreview(result.url);
+      toast({ title: 'Proof uploaded', variant: 'success' });
+    } catch (err) {
+      toast({ title: 'Upload failed', description: (err as Error)?.message, variant: 'destructive' });
+    } finally {
+      setUploadingProof(false);
+    }
+  }
 
   async function submit() {
     setErrors({});
@@ -143,8 +163,34 @@ export function PaymentDialog({ open, onClose }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="proof">Proof of transaction (image key)</Label>
-            <Input id="proof" value={proofImageKey} placeholder="uploaded-file-key" onChange={(e) => setProofImageKey(e.target.value)} />
+            <Label htmlFor="proof">Proof of transaction</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="proof"
+                type="file"
+                accept="image/*"
+                className="file:text-foreground"
+                onChange={handleFileUpload}
+                disabled={uploadingProof}
+              />
+              {uploadingProof && <span className="text-sm text-muted-foreground shrink-0">Uploading…</span>}
+            </div>
+            {proofImageKey && (
+              <div className="mt-2">
+                {proofPreview ? (
+                  <a href={proofPreview} target="_blank" rel="noreferrer" className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={proofPreview}
+                      alt="Proof preview"
+                      className="h-24 w-24 rounded-md border object-cover"
+                    />
+                  </a>
+                ) : (
+                  <p className="text-xs text-muted-foreground">File uploaded (key: {proofImageKey.slice(0, 8)}…)</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

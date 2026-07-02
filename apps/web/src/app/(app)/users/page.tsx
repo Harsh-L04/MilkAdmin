@@ -1,11 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, UsersRound } from 'lucide-react';
+import { Link2, LogOut, Plus, UsersRound } from 'lucide-react';
 import type { OnboardedUserRow } from '@moderns-milk/contracts';
 import { useOnboardedUsers, type UserTab } from '@/features/onboarding/use-onboarding';
 import { OnboardingFormDialog } from '@/features/onboarding/onboarding-form-dialog';
+import { ReconcileDialog } from '@/features/users/reconcile-dialog';
 import { useAuth } from '@/lib/auth-context';
+import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 import type { Role } from '@moderns-milk/contracts';
 
@@ -58,6 +61,7 @@ export default function UsersPage() {
   const [tab, setTab] = React.useState<UserTab>('distributors');
   const [search, setSearch] = React.useState('');
   const [formOpen, setFormOpen] = React.useState(false);
+  const [reconcileOpen, setReconcileOpen] = React.useState(false);
 
   // Keep the active tab valid if the visible set changes with the role.
   React.useEffect(() => {
@@ -71,10 +75,16 @@ export default function UsersPage() {
         title="User management"
         description="Onboard and manage distributors, retailers, sales heads and sales officers."
         actions={
-          <Button onClick={() => setFormOpen(true)}>
-            <Plus />
-            Add user
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setReconcileOpen(true)}>
+              <Link2 />
+              Reconcile
+            </Button>
+            <Button onClick={() => setFormOpen(true)}>
+              <Plus />
+              Add user
+            </Button>
+          </div>
         }
       />
 
@@ -105,6 +115,7 @@ export default function UsersPage() {
       </Tabs>
 
       <OnboardingFormDialog open={formOpen} tab={tab} onClose={() => setFormOpen(false)} />
+      <ReconcileDialog open={reconcileOpen} onClose={() => setReconcileOpen(false)} />
     </div>
   );
 }
@@ -112,6 +123,21 @@ export default function UsersPage() {
 function UserTable({ tab, search }: { tab: UserTab; search: string }) {
   const { data, isLoading, isError, error } = useOnboardedUsers(tab, search);
   const isStaff = tab === 'sales-heads' || tab === 'sales-officers';
+  const { toast } = useToast();
+  const [loggingOut, setLoggingOut] = React.useState<string | null>(null);
+
+  const handleForceLogout = async (userId: string, name: string) => {
+    if (!window.confirm(`Force logout ${name}? This will invalidate all their active sessions.`)) return;
+    setLoggingOut(userId);
+    try {
+      await api.admin.forceLogout(userId);
+      toast({ title: `${name} logged out`, variant: 'success' });
+    } catch (err) {
+      toast({ title: 'Could not force logout', description: (err as Error)?.message, variant: 'destructive' });
+    } finally {
+      setLoggingOut(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -148,6 +174,7 @@ function UserTable({ tab, search }: { tab: UserTab; search: string }) {
           <TableHead>Onboarded</TableHead>
           {!isStaff && <TableHead>Onboarding</TableHead>}
           <TableHead>Status</TableHead>
+          <TableHead className="w-0" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -174,6 +201,17 @@ function UserTable({ tab, search }: { tab: UserTab; search: string }) {
               <Badge variant={r.status === 'ACTIVE' ? 'success' : 'muted'}>
                 {r.status === 'ACTIVE' ? 'Active' : 'Inactive'}
               </Badge>
+            </TableCell>
+            <TableCell>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={loggingOut === r.id}
+                onClick={() => handleForceLogout(r.id, r.fullName)}
+                title="Force logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </TableCell>
           </TableRow>
         ))}

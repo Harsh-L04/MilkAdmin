@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateSalesVisitInput } from '@moderns-milk/contracts';
+import { Prisma } from '@moderns-milk/database';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../common/auth/current-user.decorator';
 import { canAccessDistributorResource } from '../common/authz/scope';
@@ -94,11 +95,23 @@ export class SalesVisitService {
     return this.toDto(visit);
   }
 
-  async list(user: AuthenticatedUser) {
-    const where =
+  async list(
+    user: AuthenticatedUser,
+    filters: { dateFrom?: string; dateTo?: string; outletType?: string } = {},
+  ) {
+    const where: Prisma.SalesVisitWhereInput =
       user.role === 'ADMIN' || user.role === 'SALES_HEAD'
         ? {}
         : { distributorId: user.distributorId ?? '__none__' };
+
+    if (filters.dateFrom || filters.dateTo) {
+      where.date = {};
+      if (filters.dateFrom) where.date.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.date.lte = new Date(filters.dateTo);
+    }
+    if (filters.outletType && (filters.outletType === 'NEW' || filters.outletType === 'EXISTING')) {
+      where.outletType = filters.outletType;
+    }
 
     const visits = await this.prisma.salesVisit.findMany({
       where,

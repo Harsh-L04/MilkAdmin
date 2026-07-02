@@ -1,6 +1,8 @@
 import { PrismaClient, ProductCategory, Role, Uom } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+const DEFAULT_HASH = bcrypt.hashSync('Moderns@2026', 10);
 
 type ProductSeed = {
   sku: string;
@@ -105,8 +107,8 @@ async function main() {
   // Admin
   await prisma.user.upsert({
     where: { phone: '+919000000001' },
-    update: {},
-    create: { phone: '+919000000001', name: 'Platform Admin', role: Role.ADMIN, email: 'admin@modernsmilk.com' },
+    update: { passwordHash: DEFAULT_HASH },
+    create: { phone: '+919000000001', name: 'Platform Admin', role: Role.ADMIN, email: 'admin@modernsmilk.com', passwordHash: DEFAULT_HASH },
   });
 
   // Distributor org + staff user + route
@@ -117,8 +119,8 @@ async function main() {
   });
   await prisma.user.upsert({
     where: { phone: '+919000000002' },
-    update: { distributorId: distributor.id },
-    create: { phone: '+919000000002', name: 'Distributor Manager', role: Role.DISTRIBUTOR, distributorId: distributor.id },
+    update: { distributorId: distributor.id, passwordHash: DEFAULT_HASH },
+    create: { phone: '+919000000002', name: 'Distributor Manager', role: Role.DISTRIBUTOR, distributorId: distributor.id, passwordHash: DEFAULT_HASH },
   });
   const route = await prisma.route.upsert({
     where: { distributorId_name: { distributorId: distributor.id, name: 'Route A' } },
@@ -134,12 +136,13 @@ async function main() {
   for (const rep of salesReps) {
     await prisma.user.upsert({
       where: { phone: rep.phone },
-      update: { distributorId: distributor.id },
+      update: { distributorId: distributor.id, passwordHash: DEFAULT_HASH },
       create: {
         phone: rep.phone,
         name: rep.name,
         role: Role.SALES_OFFICER,
         distributorId: distributor.id,
+        passwordHash: DEFAULT_HASH,
       },
     });
   }
@@ -147,8 +150,8 @@ async function main() {
   // Retailer user + retailer + account
   const retailerUser = await prisma.user.upsert({
     where: { phone: '+919000000003' },
-    update: {},
-    create: { phone: '+919000000003', name: 'Sharma General Store', role: Role.RETAILER },
+    update: { passwordHash: DEFAULT_HASH },
+    create: { phone: '+919000000003', name: 'Sharma General Store', role: Role.RETAILER, passwordHash: DEFAULT_HASH },
   });
   const retailer = await prisma.retailer.upsert({
     where: { userId: retailerUser.id },
@@ -167,7 +170,6 @@ async function main() {
   });
 
   // Open order window so retailers can place orders out of the box.
-  // Delivery tomorrow; cutoff set far ahead so the demo window stays OPEN.
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(0, 0, 0, 0);
