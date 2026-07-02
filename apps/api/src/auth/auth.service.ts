@@ -80,6 +80,19 @@ export class AuthService {
     await this.tokens.revokeAll(userId);
   }
 
+  async resetPassword(phone: string, code: string, newPassword: string): Promise<void> {
+    const ok = await this.otp.verify(phone, code);
+    if (!ok) throw new UnauthorizedException('Invalid or expired code');
+    const user = await this.prisma.user.findUnique({ where: { phone } });
+    if (!user) throw new UnauthorizedException('User not found');
+    const hash = await bcrypt.hash(newPassword, this.bcryptRounds);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hash },
+    });
+    await this.tokens.revokeAll(user.id);
+  }
+
   private async buildPayload(phone: string): Promise<JwtPayload> {
     const user = await this.prisma.user.findUnique({
       where: { phone },

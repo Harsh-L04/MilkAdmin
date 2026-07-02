@@ -106,6 +106,14 @@ export class AuthController {
     return tokens;
   }
 
+  @Public()
+  @Post('reset-password')
+  @HttpCode(200)
+  async resetPassword(@Body() body: { phone: string; code: string; newPassword: string }) {
+    await this.auth.resetPassword(body.phone, body.code, body.newPassword);
+    return { message: 'Password reset successfully' };
+  }
+
   @Post('logout')
   @HttpCode(204)
   async logout(
