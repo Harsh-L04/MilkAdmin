@@ -19,8 +19,8 @@ beforeEach(() => {
 
 describe('useOrderDeadline', () => {
   it('gets deadline', async () => {
-    const deadline = { time: '14:00', timezone: 'Asia/Kolkata' };
-    vi.spyOn(api.settings, 'getOrderDeadline').mockResolvedValue(deadline as any);
+    const deadline = { time: '14:00' };
+    vi.spyOn(api.settings, 'getOrderDeadline').mockResolvedValue(deadline);
     const { result } = renderHook(() => useOrderDeadline(), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(deadline);
@@ -29,9 +29,9 @@ describe('useOrderDeadline', () => {
 
 describe('useSetOrderDeadline', () => {
   it('updates deadline', async () => {
-    vi.spyOn(api.settings, 'setOrderDeadline').mockResolvedValue({ time: '15:00' } as any);
+    vi.spyOn(api.settings, 'setOrderDeadline').mockResolvedValue({ time: '15:00' });
     const { result } = renderHook(() => useSetOrderDeadline(), { wrapper });
-    result.current.mutate({ time: '15:00', timezone: 'Asia/Kolkata' });
+    result.current.mutate({ time: '15:00' });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 });

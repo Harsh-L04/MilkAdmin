@@ -179,6 +179,7 @@ export function PaymentDialog({ open, onClose }: Props) {
               <div className="mt-2">
                 {proofPreview ? (
                   <a href={proofPreview} target="_blank" rel="noreferrer" className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={proofPreview}
                       alt="Proof preview"

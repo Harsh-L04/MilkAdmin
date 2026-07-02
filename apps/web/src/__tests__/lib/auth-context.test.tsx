@@ -48,7 +48,7 @@ describe('AuthProvider', () => {
 
 describe('AuthProvider with verifyOtp', () => {
   it('verifyOtp gets tokens and sets session', async () => {
-    const authTokens = { accessToken: 'new-access', refreshToken: 'new-refresh' };
+    const authTokens = { accessToken: 'new-access', refreshToken: 'new-refresh', expiresIn: 3600 };
     vi.spyOn(api.auth, 'verifyOtp').mockResolvedValue(authTokens);
     vi.spyOn(tokens, 'decodeSession').mockReturnValue({ sub: 'user-1', role: 'DISTRIBUTOR' });
 
@@ -83,7 +83,6 @@ describe('AuthProvider logout', () => {
     vi.spyOn(api.auth, 'logout').mockResolvedValue(undefined);
     vi.spyOn(tokens, 'getTokens').mockReturnValue({
       accessToken: 'valid',
-      refreshToken: 'valid',
     });
 
     render(<AuthProvider><TestConsumer /></AuthProvider>);

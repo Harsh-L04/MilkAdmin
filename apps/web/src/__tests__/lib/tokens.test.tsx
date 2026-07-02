@@ -10,15 +10,15 @@ beforeEach(() => {
 });
 
 describe('setTokens / getTokens', () => {
-  it('stores access + refresh tokens', () => {
-    setTokens({ accessToken: 'access-123', refreshToken: 'refresh-456' });
+  it('stores access token', () => {
+    setTokens({ accessToken: 'access-123' });
     const raw = localStorage.getItem(STORAGE_KEY);
-    expect(raw).toBe(JSON.stringify({ accessToken: 'access-123', refreshToken: 'refresh-456' }));
+    expect(raw).toBe(JSON.stringify({ accessToken: 'access-123' }));
   });
 
   it('returns parsed tokens', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken: 'acc', refreshToken: 'ref' }));
-    expect(getTokens()).toEqual({ accessToken: 'acc', refreshToken: 'ref' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken: 'acc' }));
+    expect(getTokens()).toEqual({ accessToken: 'acc' });
   });
 
   it('returns null when no tokens stored', () => {
@@ -33,7 +33,7 @@ describe('setTokens / getTokens', () => {
 
 describe('clearTokens', () => {
   it('removes from storage and clears cache', () => {
-    setTokens({ accessToken: 'a', refreshToken: 'b' });
+    setTokens({ accessToken: 'a' });
     clearTokens();
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(getTokens()).toBeNull();

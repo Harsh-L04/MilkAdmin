@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Link2, UsersRound } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, type UnlinkedUserRow, type DistributorRow } from '@/lib/api';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

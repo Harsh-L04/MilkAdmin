@@ -71,7 +71,7 @@ describe('api.catalog', () => {
   it('listProducts omits undefined/null/empty params', async () => {
     mockFetch.mockResolvedValue(mockResponse(200, []));
     await api.catalog.listProducts({});
-    const call = mockFetch.mock.calls[0][0] as string;
+    const call = mockFetch.mock.calls[0]?.[0] as string | undefined;
     expect(call).toBe('/bff/catalog/products');
   });
 
@@ -129,7 +129,7 @@ describe('api.orders', () => {
 
   it('advance sends POST advance', async () => {
     mockFetch.mockResolvedValue(mockResponse(200, { id: '1' }));
-    await api.orders.advance({ orderId: '1', status: 'IN_PRODUCTION' });
+    await api.orders.advance({ orderId: '1', toStatus: 'IN_PRODUCTION' });
     expect(mockFetch).toHaveBeenCalledWith('/bff/orders/advance', expect.objectContaining({ method: 'POST' }));
   });
 });
@@ -202,7 +202,7 @@ describe('query params built correctly', () => {
   it('builds correct URL from params', async () => {
     mockFetch.mockResolvedValue(mockResponse(200, []));
     await api.sampleOrders.list({ search: 'test', date: '2024-01-01' });
-    const url = mockFetch.mock.calls[0][0] as string;
+    const url = mockFetch.mock.calls[0]?.[0] as string | undefined;
     expect(url).toContain('search=test');
     expect(url).toContain('date=2024-01-01');
   });
