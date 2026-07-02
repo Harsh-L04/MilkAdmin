@@ -3,7 +3,7 @@ services:
     name: moderns-milk-api
     runtime: node
     rootDir: .
-    buildCommand: npm install && npm run build -w @moderns-milk/contracts && npm run build -w @moderns-milk/database && npm run build -w @moderns-milk/api
+    buildCommand: npm install && npm run build -w @moderns-milk/contracts && npm run build -w @moderns-milk/database && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && npm run build -w @moderns-milk/api
     startCommand: node apps/api/dist/main.js
     envVars:
       - key: NODE_ENV
